@@ -1,0 +1,12 @@
+{
+  "reminders": [
+    {
+      "time": "04:00",
+      "task": "Study Mathematics",
+      "type": "study",
+      "end": "",
+      "repeat": "once",
+      "link": ""
+    }
+  ]
+}

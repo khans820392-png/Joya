@@ -1,0 +1,13 @@
+<!doctype html><meta charset="utf-8">
+<body style="font:20px sans-serif;padding:20px"><h3>Firebase test</h3><pre id="o">chal raha hai...</pre>
+<script type="module">
+import { ref, setDoc } from "./firebase.js";
+const o = document.getElementById("o");
+const t = setTimeout(() => o.textContent += "\n10 sec ho gaye, server se jawab nahi aaya.", 10000);
+try {
+  await setDoc(ref, { test: "ok", time: Date.now() });
+  clearTimeout(t); o.textContent += "\nSAVE HO GAYA ✔";
+} catch (e) {
+  clearTimeout(t); o.textContent += "\nERROR: " + e.code + " - " + e.message;
+}
+</script>

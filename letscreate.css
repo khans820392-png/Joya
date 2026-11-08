@@ -1,0 +1,23 @@
+body:{
+	margin:0;
+	padding:0; 
+}
+h1{
+	background-color:blue;
+	color:white;
+	text-align:center;
+}
+ul{
+	background-color:black;
+}
+ul li{
+	background-color:lightgrey;
+	display:inline-block;
+	padding:10px
+}
+ul li:hover{
+	background-color:yellow;
+	color:purple;
+	padding-left:15px;
+	transition:0.8s;
+}

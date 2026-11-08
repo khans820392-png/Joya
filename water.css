@@ -1,0 +1,16 @@
+.gallery{
+	width: 350px;
+	height: auto;
+	border: 5px solid black; 
+	float: left;   
+}
+img{
+	width:350px;
+	height: 200px;
+
+}
+.text{
+	font-size: 25px;
+   text-align: center;
+   background-color: darkred
+}

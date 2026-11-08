@@ -1,0 +1,55 @@
+<!doctype html><html ><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>CorpFlow - Boss</title>
+<link rel="stylesheet" href="style2.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script></head><body>
+<h1>CorpFlow · Boss Dashboard</h1>
+       <p class="sub">TechNova Solutions</p>
+<div class="row two">
+  <div class="panel">
+    <label for="total">Sales target (₹)</label>
+    <input id="total" type="number" inputmode="numeric" value="150000">
+    <button id="send">Send to Manager</button>
+    <button id="reset" class="ghost">Reset</button>
+    <div class="msg" id="msg"></div>
+  </div>
+  <div class="panel">
+    <label>Total sold</label>
+    <div class="big" id="sold">₹0</div>
+    <div class="sub" id="of">of ₹0</div>
+    <div class="bar"><i id="fill"></i></div>
+  </div>
+</div>
+<div class="panel"><canvas id="chart" height="110"></canvas></div>
+<script type="module">
+import { ref, EMPLOYEES, inr, setDoc, onSnapshot } from "./firebase.js";
+const zero = () => Object.fromEntries(EMPLOYEES.map(e => [e.id, 0]));
+const $ = id => document.getElementById(id);
+
+const chart = new Chart($("chart"), {
+  type: "bar",
+  data: { labels: EMPLOYEES.map(e => e.name), datasets: [
+    { label: "Target", data: [0,0,0], backgroundColor: "#1f3350" },
+    { label: "Sold",   data: [0,0,0], backgroundColor: "#4ade80" } ] },
+  options: { animation: { duration: 500 }, scales: { y: { beginAtZero: true, ticks: { color: "#8da2bd" } }, x: { ticks: { color: "#eef4fb" } } },
+             plugins: { legend: { labels: { color: "#8da2bd" } } } }
+});
+
+$("send").onclick = async () => {
+  const total = Number($("total").value);
+  if (!total) { $("msg").textContent = "Target amount daalo."; return; }
+  await setDoc(ref, { total, status: "sent", assign: zero(), sales: zero() });
+  $("msg").textContent = "Target Arjun ke phone par bhej diya ✔";
+};
+$("reset").onclick = async () => { await setDoc(ref, { total: 0, status: "empty", assign: zero(), sales: zero() }); $("msg").textContent = ""; };
+
+onSnapshot(ref, snap => {
+  const d = snap.data(); if (!d) return;
+  const sold = EMPLOYEES.reduce((s, e) => s + (d.sales?.[e.id] || 0), 0);
+  $("sold").textContent = inr(sold);
+  $("of").textContent = "of " + inr(d.total);
+  $("fill").style.width = (d.total ? Math.min(100, sold / d.total * 100) : 0) + "%";
+  chart.data.datasets[0].data = EMPLOYEES.map(e => d.assign?.[e.id] || 0);
+  chart.data.datasets[1].data = EMPLOYEES.map(e => d.sales?.[e.id] || 0);
+  chart.update();
+});
+</script></body></html>

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>कॉपी शॉप</title>
+<style>
+:root{--paper:#F7F8FA;--card:#fff;--ink:#14213D;--muted:#5B6478;--line:#D9DEE8;--blue:#1F4FD8;--blue-d:#173DAA;--yellow:#FFC93C;--ok:#12805C}
+@media (prefers-color-scheme:dark){:root{--paper:#0F1626;--card:#18213A;--ink:#EEF1F8;--muted:#A3ADC4;--line:#2A3556;--blue:#6E93FF;--blue-d:#8FAAFF;--ok:#3DD6A0}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"Noto Sans Devanagari","Mukta",system-ui,sans-serif;line-height:1.55}
+main{max-width:520px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:1.5rem;margin:8px 0 4px}
+.sub{color:var(--muted);margin:0 0 20px}
+.drop{display:block;border:2px dashed var(--blue);border-radius:14px;padding:28px 16px;text-align:center;background:var(--card);cursor:pointer;font-weight:600;color:var(--blue)}
+.drop:focus-within{outline:3px solid var(--yellow)}
+.drop input{position:absolute;opacity:0;width:1px;height:1px}
+.file{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:14px}
+.top{display:flex;gap:12px;align-items:center}
+.thumb{width:52px;height:64px;border-radius:6px;border:1px solid var(--line);object-fit:cover;background:var(--paper);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--muted);font-size:.8rem;flex:none}
+.name{font-weight:600;overflow-wrap:anywhere}
+.meta{color:var(--muted);font-size:.9rem}
+.row{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:12px;flex-wrap:wrap}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:transparent;color:var(--ink);padding:9px 14px;font:inherit;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--blue);color:#fff}
+.step{display:flex;align-items:center;gap:6px}
+.step button{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:1.2rem;cursor:pointer}
+.step span{min-width:28px;text-align:center;font-weight:700}
+.go{width:100%;margin-top:14px;border:0;border-radius:12px;background:var(--yellow);color:#14213D;font:inherit;font-weight:700;padding:14px;font-size:1.05rem;cursor:pointer}
+.go:hover{filter:brightness(.95)}
+.go:disabled{opacity:.6;cursor:wait}
+button:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.sheet{text-align:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px 16px;margin-top:20px}
+.amt{font-size:2.4rem;font-weight:700;margin:6px 0}
+.ok{color:var(--ok);font-weight:700;font-size:1.2rem}
+.note{color:var(--muted);font-size:.85rem;margin-top:10px}
+.link{background:none;border:0;color:var(--blue);font:inherit;text-decoration:underline;cursor:pointer;margin-top:14px}
+.err{color:#C0392B;margin-top:10px}
+</style>
+</head>
+<body>
+<main>
+  <h1>अपनी फाइल से कॉपी निकालें</h1>
+  <p class="sub">फाइल चुनें, कॉपी की संख्या तय करें, पेमेंट करें। कॉपी दुकान पर निकल जाएगी।</p>
+  <div id="app"></div>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const app = $("#app");
+let session = "";
+try { session = localStorage.getItem("cs_session") || ""; } catch(e){}
+if (!session) {
+  session = Math.random().toString(36).slice(2, 12).replace(/[^a-z0-9]/g, "a");
+  try { localStorage.setItem("cs_session", session); } catch(e){}
+}
+let prices = {bw: 2, color: 10};
+let files = [];                      // {id,name,pages,copies,color}
+fetch("/api/prices").then(r => r.json()).then(p => prices = p).catch(() => {});
+
+const price = f => f.pages * f.copies * (f.color ? prices.color : prices.bw);
+
+function renderList(msg) {
+  app.innerHTML = `
+    <label class="drop">
+      <input type="file" id="pick" accept=".pdf,.jpg,.jpeg,.png,image/*,application/pdf" multiple>
+      फोटो या PDF चुनें
+    </label>
+    ${msg ? `<p class="err">${msg}</p>` : ""}
+    <div id="list"></div>`;
+  $("#pick").onchange = upload;
+  drawFiles();
+}
+
+function drawFiles() {
+  const list = $("#list");
+  list.innerHTML = "";
+  files.forEach((f, i) => {
+    const isImg = /\.(jpe?g|png)$/i.test(f.id);
+    const el = document.createElement("div");
+    el.className = "file";
+    el.innerHTML = `
+      <div class="top">
+        ${isImg ? `<img class="thumb" alt="" src="/api/files/${session}/${f.id}">` : `<div class="thumb">PDF</div>`}
+        <div><div class="name"></div><div class="meta">${f.pages} पेज</div></div>
+      </div>
+      <div class="row">
+        <div class="seg" role="group" aria-label="रंग">
+          <button data-c="0" aria-pressed="${!f.color}">ब्लैक-वाइट</button>
+          <button data-c="1" aria-pressed="${f.color}">कलर</button>
+        </div>
+        <div class="step" role="group" aria-label="कॉपी की संख्या">
+          <button data-d="-1" aria-label="कम करें">−</button><span>${f.copies}</span><button data-d="1" aria-label="बढ़ाएँ">+</button>
+        </div>
+      </div>
+      <button class="go">कॉपी करें · ₹${price(f)}</button>`;
+    el.querySelector(".name").textContent = f.name;
+    el.querySelectorAll("[data-c]").forEach(b => b.onclick = () => { f.color = b.dataset.c === "1"; drawFiles(); });
+    el.querySelectorAll("[data-d]").forEach(b => b.onclick = () => { f.copies = Math.max(1, Math.min(100, f.copies + +b.dataset.d)); drawFiles(); });
+    el.querySelector(".go").onclick = () => order(f);
+    list.appendChild(el);
+  });
+}
+
+async function upload(e) {
+  const fd = new FormData();
+  fd.append("session", session);
+  [...e.target.files].forEach(f => fd.append("files", f));
+  try {
+    const r = await fetch("/api/upload", {method: "POST", body: fd});
+    if (!r.ok) throw 0;
+    const saved = await r.json();
+    if (!saved.length) return renderList("सिर्फ़ PDF, JPG या PNG फाइल चलेगी।");
+    saved.forEach(s => files.push({...s, copies: 1, color: false}));
+    renderList();
+  } catch (_) { renderList("फाइल अपलोड नहीं हुई। इंटरनेट देखकर दोबारा कोशिश करें (25 MB तक)।"); }
+}
+
+async function order(f) {
+  const r = await fetch("/api/order", {method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({session, file: f.id, name: f.name, copies: f.copies, color: f.color})});
+  if (!r.ok) return renderList("ऑर्डर नहीं बना। दोबारा कोशिश करें।");
+  showPay(await r.json());
+}
+
+function showPay(job) {
+  app.innerHTML = `
+    <div class="sheet">
+      <div class="name"></div>
+      <div class="meta">${job.pages} पेज × ${job.copies} कॉपी · ${job.color ? "कलर" : "ब्लैक-वाइट"}</div>
+      <div class="amt">₹${job.amount}</div>
+      <button class="go" id="pay">₹${job.amount} पे करें</button>
+      <p class="note">टेस्ट मोड: ये नकली पेमेंट है। असली में यहाँ UPI खुलेगा।</p>
+      <button class="link" id="back">वापस जाएँ</button>
+    </div>`;
+  app.querySelector(".name").textContent = job.name;
+  $("#back").onclick = () => renderList();
+  $("#pay").onclick = async () => {
+    $("#pay").disabled = true;
+    await fetch("/api/pay/mock/" + job.id, {method: "POST"});
+    waitPrint(job);
+  };
+}
+
+function waitPrint(job) {
+  app.innerHTML = `<div class="sheet"><div class="ok">पेमेंट हो गया ✓</div><p id="st">कॉपी निकल रही है…</p></div>`;
+  const t = setInterval(async () => {
+    const j = await (await fetch("/api/job/" + job.id)).json();
+    if (j.status === "printed") {
+      clearInterval(t);
+      app.innerHTML = `<div class="sheet"><div class="ok">कॉपी निकल गई ✓</div><p>दुकान से अपनी कॉपी ले लें।</p><button class="link" id="again">और कॉपी निकालें</button></div>`;
+      $("#again").onclick = () => renderList();
+    }
+  }, 1500);
+}
+renderList();
+</script>
+</body>
+</html>

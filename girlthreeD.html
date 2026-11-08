@@ -1,0 +1,185 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Anime Girl Animation</title>
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #171323;
+    font-family: Arial, sans-serif;
+}
+
+.container {
+    position: relative;
+    width: 400px;
+    max-width: 95vw;
+    overflow: hidden;
+    border-radius: 15px;
+}
+
+#girl {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+/* Eye blinking */
+.eye {
+    position: absolute;
+    width: 7%;
+    height: 2%;
+    background: #e9a8bc;
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.left-eye {
+    left: 37%;
+    top: 32%;
+}
+
+.right-eye {
+    left: 56%;
+    top: 32%;
+}
+
+.eye.blink {
+    animation: blink 0.18s ease-in-out forwards;
+}
+
+@keyframes blink {
+    0% {
+        opacity: 0;
+        transform: scaleY(0.2);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scaleY(1.5);
+    }
+
+    100% {
+        opacity: 0;
+        transform: scaleY(0.2);
+    }
+}
+
+/* Mouth movement */
+.mouth {
+    position: absolute;
+    left: 49%;
+    top: 48%;
+    width: 7%;
+    height: 1%;
+    background: #9c2947;
+    border-radius: 50%;
+    transform: translateX(-50%);
+    pointer-events: none;
+}
+
+.mouth.talking {
+    animation: talking 0.25s infinite alternate;
+}
+
+@keyframes talking {
+    from {
+        height: 1%;
+        width: 6%;
+    }
+
+    to {
+        height: 3%;
+        width: 8%;
+    }
+}
+
+button {
+    position: fixed;
+    bottom: 20px;
+    padding: 12px 22px;
+    border: none;
+    border-radius: 25px;
+    background: #ff6b9d;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- Put your girl's photo in the same folder -->
+    <img src="girl.jpg" id="girl" alt="Anime Girl">
+
+    <div class="eye left-eye"></div>
+    <div class="eye right-eye"></div>
+
+    <div class="mouth" id="mouth"></div>
+
+</div>
+
+<button id="talkButton">Start / Stop Talking</button>
+
+<script>
+const eyes = document.querySelectorAll(".eye");
+const mouth = document.getElementById("mouth");
+const button = document.getElementById("talkButton");
+
+let talking = false;
+let blinkTimer;
+
+function blinkEyes() {
+    eyes.forEach(eye => {
+        eye.classList.remove("blink");
+
+        void eye.offsetWidth;
+
+        eye.classList.add("blink");
+    });
+}
+
+function scheduleBlink() {
+    blinkEyes();
+
+    blinkTimer = setTimeout(
+        scheduleBlink,
+        2000 + Math.random() * 2500
+    );
+}
+
+scheduleBlink();
+
+button.addEventListener("click", () => {
+    talking = !talking;
+
+    if (talking) {
+        mouth.classList.add("talking");
+        button.textContent = "Stop Talking";
+    } else {
+        mouth.classList.remove("talking");
+        button.textContent = "Start Talking";
+    }
+});
+</script>
+
+</body>
+</html>
+```

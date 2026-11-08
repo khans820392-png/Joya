@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zoya - Autonomous AI Hub</title>
+<style>
+  :root {
+    --bg-dark: #050811;
+    --panel-bg: rgba(10, 16, 30, 0.75);
+    --border-glow: rgba(79, 216, 255, 0.3);
+    --cyan: #4fd8ff;
+    --pink: #ff6fd8;
+    --green: #00ffaa;
+    --amber: #ffcc66;
+    --text: #eaf6ff;
+    --muted: #627b9b;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body, html { width: 100%; height: 100%; overflow: hidden; background: var(--bg-dark); font-family: 'Segoe UI', system-ui, sans-serif; color: var(--text); }
+
+  .hud-wrapper {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px;
+    background: radial-gradient(circle at 50% 30%, #0c1830 0%, #050811 70%);
+  }
+
+  .hud-header {
+    width: 100%;
+    max-width: 1200px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 10;
+  }
+  .status-badge {
+    background: var(--panel-bg);
+    border: 1px solid var(--border-glow);
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    letter-spacing: 2px;
+    color: var(--cyan);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    backdrop-filter: blur(8px);
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 10px var(--cyan); animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity: 0.3;} 50%{opacity: 1;} }
+
+  /* ---------- Study mode enable banner ---------- */
+  .study-banner {
+    width: 100%;
+    max-width: 1200px;
+    background: rgba(255, 204, 102, 0.1);
+    border: 1px solid var(--amber);
+    border-radius: 10px;
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--amber);
+    margin-top: 8px;
+    z-index: 10;
+  }
+  .study-banner button {
+    background: var(--amber);
+    color: #1a1400;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    margin-left: 8px;
+  }
+  .study-banner button.enabled { background: var(--green); }
+  .study-banner.hidden { display: none; }
+
+  .core-section {
+    position: relative;
+    width: 100%;
+    height: 420px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 5;
+  }
+  .robot-face {
+    filter: drop-shadow(0 0 18px rgba(79,216,255,0.45));
+    transition: filter 0.3s ease;
+  }
+  .robot-face.speaking {
+    filter: drop-shadow(0 0 28px rgba(0,255,170,0.65));
+  }
+  .eye { animation: blink 4.5s infinite; transform-origin: center; }
+  .eye.right { animation-delay: 0.1s; }
+  @keyframes blink {
+    0%, 92%, 100% { transform: scaleY(1); }
+    95% { transform: scaleY(0.1); }
+  }
+  .core-title { text-align: center; margin-top: 2px; pointer-events: none; }
+  .core-title h1 { font-size: 20px; letter-spacing: 4px; color: var(--cyan); text-shadow: 0 0 12px var(--cyan); }
+  .core-title p { font-size: 10px; color: var(--muted); letter-spacing: 2px; }
+
+  .office-section {
+    width: 100%;
+    max-width: 1100px;
+    height: 360px;
+    background: var(--panel-bg);
+    border: 1px solid var(--border-glow);
+    border-radius: 16px;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 0 30px rgba(0,0,0,0.6);
+  }
+
+  .office-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    width: 100%;
+    height: 100%;
+    gap: 2px;
+    background: rgba(79, 216, 255, 0.1);
+  }
+
+  .room {
+    background: rgba(8, 14, 26, 0.85);
+    padding: 10px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .room-header { font-size: 11px; color: var(--cyan); letter-spacing: 1px; font-weight: bold; border-bottom: 1px dashed rgba(79,216,255,0.2); padding-bottom: 4px; display: flex; justify-content: space-between;}
+  
+  .room-stage {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .pixel-agent {
+    width: 32px;
+    height: 32px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    position: relative;
+    animation: bounce 1.2s infinite ease-in-out;
+  }
+  @keyframes bounce { 0%,100%{transform: translateY(0);} 50%{transform: translateY(-4px);} }
+
+  .desk { width: 45px; height: 25px; background: #1a2638; border: 1px solid var(--cyan); border-radius: 4px; position: absolute; bottom: 10px; }
+  .pc-screen { width: 16px; height: 12px; background: var(--cyan); position: absolute; top: -14px; left: 14px; border-radius: 2px; box-shadow: 0 0 8px var(--cyan); }
+
+  .bubble {
+    position: absolute;
+    top: -22px;
+    background: #ffffff;
+    color: #000;
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-weight: bold;
+    white-space: nowrap;
+    opacity: 0;
+    transition: 0.3s;
+  }
+  .room.working .bubble { opacity: 1; animation: pop 0.4s ease-out; }
+  @keyframes pop { 0%{transform: scale(0.5);} 100%{transform: scale(1);} }
+
+  .hud-footer {
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 10;
+  }
+  .caption-box { font-size: 13px; color: var(--text); text-align: center; min-height: 20px; text-shadow: 0 0 8px rgba(255,255,255,0.3); }
+  
+  .input-group {
+    display: flex;
+    gap: 10px;
+    background: var(--panel-bg);
+    border: 1px solid var(--border-glow);
+    padding: 6px 12px;
+    border-radius: 30px;
+    backdrop-filter: blur(10px);
+  }
+  .input-group input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-size: 14px;
+    padding: 6px;
+  }
+  .mic-btn {
+    background: var(--cyan);
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    color: #000;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 0 12px var(--cyan);
+  }
+  .mic-btn.listening {
+    animation: micPulse 1s infinite;
+  }
+  @keyframes micPulse {
+    0%, 100% { box-shadow: 0 0 12px var(--cyan); }
+    50% { box-shadow: 0 0 28px var(--green); }
+  }
+  .mic-btn:hover { transform: scale(1.05); }
+</style>
+</head>
+<body>
+
+<div class="hud-wrapper">
+  <div class="hud-header">
+    <div style="font-size:12px; letter-spacing:2px; color:var(--muted)">SYSTEM ONLINE</div>
+    <div class="status-badge"><span class="dot"></span><span id="statusText">WAKE-WORD ACTIVE</span></div>
+    <div style="font-size:12px; color:var(--cyan)">WAKE-WORD: "HEY ZOYA"</div>
+  </div>
+
+  <div class="study-banner" id="studyBanner">
+    <span>📘 "Padhao" ya "3D map kholo" bolne par naya tab khulne ke liye, dono buttons ek-ek baar click karo</span>
+    <button id="enableStudyBtn">ENABLE STUDY MODE</button>
+    <button id="enableMapBtn">ENABLE 3D MAP</button>
+  </div>
+
+  <div class="core-section">
+    <svg id="robotFace" class="robot-face" width="180" height="380" viewBox="0 0 200 420">
+      <defs>
+        <radialGradient id="irisGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#d4ffff"/>
+          <stop offset="55%" stop-color="#4fd8ff"/>
+          <stop offset="100%" stop-color="#1a6c8c"/>
+        </radialGradient>
+        <linearGradient id="hairGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#8a5a3f"/>
+          <stop offset="100%" stop-color="#5c3a26"/>
+        </linearGradient>
+      </defs>
+
+      <!-- Hair (back layer) -->
+      <ellipse cx="100" cy="118" rx="70" ry="88" fill="url(#hairGrad)"/>
+
+      <!-- Face -->
+      <ellipse cx="100" cy="128" rx="50" ry="58" fill="#ffe3c7"/>
+
+      <!-- Blush -->
+      <ellipse cx="64" cy="152" rx="10" ry="6" fill="#ff8fa3" opacity="0.4"/>
+      <ellipse cx="136" cy="152" rx="10" ry="6" fill="#ff8fa3" opacity="0.4"/>
+
+      <!-- Eyebrows -->
+      <path d="M58 100 Q72 92 86 98" stroke="#5c3a26" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <path d="M114 98 Q128 92 142 100" stroke="#5c3a26" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+
+      <!-- Eyes -->
+      <g class="eye left">
+        <ellipse cx="74" cy="122" rx="14" ry="16" fill="#ffffff"/>
+        <circle cx="74" cy="124" r="9" fill="url(#irisGlow)"/>
+        <circle cx="74" cy="124" r="3.5" fill="#132233"/>
+        <circle cx="70.5" cy="120" r="2.2" fill="#ffffff"/>
+      </g>
+      <g class="eye right">
+        <ellipse cx="126" cy="122" rx="14" ry="16" fill="#ffffff"/>
+        <circle cx="126" cy="124" r="9" fill="url(#irisGlow)"/>
+        <circle cx="126" cy="124" r="3.5" fill="#132233"/>
+        <circle cx="122.5" cy="120" r="2.2" fill="#ffffff"/>
+      </g>
+
+      <!-- Nose (minimal) -->
+      <path d="M98 138 Q100 143 102 138" stroke="#e8b98f" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+
+      <!-- Mouth (animated when speaking) -->
+      <rect id="mouthShape" x="88" y="160" width="24" height="5" rx="2.5" fill="#e0597a"
+            style="filter: drop-shadow(0 0 3px #ff6f91);"/>
+
+      <!-- Hair front bangs -->
+      <path d="M30 95 C28 50 60 18 100 18 C140 18 172 50 170 95
+               C160 75 145 60 125 70 C118 58 108 52 100 52
+               C92 52 82 58 75 70 C55 60 40 75 30 95 Z"
+            fill="url(#hairGrad)"/>
+      <path d="M26 92 C20 130 24 165 38 190" stroke="#5c3a26" stroke-width="10" fill="none" stroke-linecap="round" opacity="0.9"/>
+      <path d="M174 92 C180 130 176 165 162 190" stroke="#5c3a26" stroke-width="10" fill="none" stroke-linecap="round" opacity="0.9"/>
+
+      <!-- Hair bow -->
+      <path d="M118 30 L140 14 L142 34 Z" fill="#141414"/>
+      <path d="M118 30 L96 14 L94 34 Z" fill="#141414"/>
+      <circle cx="118" cy="30" r="6" fill="#1c1c1c"/>
+
+      <!-- ===================== BODY ===================== -->
+      <!-- Neck -->
+      <rect x="90" y="182" width="20" height="24" fill="#ffe3c7"/>
+
+      <!-- Left arm (puffy white sleeve) -->
+      <path d="M68 215 C44 222 32 258 38 298 C40 312 46 322 56 328"
+            stroke="#faf6ef" stroke-width="24" fill="none" stroke-linecap="round"/>
+      <path d="M68 215 C44 222 32 258 38 298 C40 312 46 322 56 328"
+            stroke="#d8cfc0" stroke-width="24" fill="none" stroke-linecap="round" opacity="0.25"/>
+      <ellipse cx="56" cy="330" rx="9" ry="10" fill="#ffe3c7"/>
+      <rect x="49" y="320" width="14" height="7" rx="3" fill="#2a2a2a"/>
+
+      <!-- Right arm (puffy white sleeve) -->
+      <path d="M132 215 C156 222 168 258 162 298 C160 312 154 322 144 328"
+            stroke="#faf6ef" stroke-width="24" fill="none" stroke-linecap="round"/>
+      <path d="M132 215 C156 222 168 258 162 298 C160 312 154 322 144 328"
+            stroke="#d8cfc0" stroke-width="24" fill="none" stroke-linecap="round" opacity="0.25"/>
+      <ellipse cx="144" cy="330" rx="9" ry="10" fill="#ffe3c7"/>
+      <rect x="137" y="320" width="14" height="7" rx="3" fill="#2a2a2a"/>
+
+      <!-- Blouse (white top) -->
+      <path d="M72 204 C72 198 128 198 128 204
+               L134 258 C136 275 130 286 118 290
+               L82 290 C70 286 64 275 66 258 Z"
+            fill="#faf6ef" stroke="#cfc6b8" stroke-width="1.5"/>
+
+      <!-- Ribbon bow tie at collar -->
+      <path d="M92 206 L100 216 L92 228 Z" fill="#1c1c1c"/>
+      <path d="M108 206 L100 216 L108 228 Z" fill="#1c1c1c"/>
+      <circle cx="100" cy="216" r="4" fill="#141414"/>
+
+      <!-- Waist corset belt -->
+      <path d="M68 278 Q100 290 132 278 L130 296 Q100 306 70 296 Z" fill="#1c1c1c"/>
+
+      <!-- Shorts -->
+      <path d="M70 296 L130 296 L126 328 Q100 338 74 328 Z" fill="#1c1c1c"/>
+
+      <!-- Stockings (thigh-high, black) -->
+      <rect x="82" y="328" width="14" height="65" rx="6" fill="#1c1c1c"/>
+      <rect x="104" y="328" width="14" height="65" rx="6" fill="#1c1c1c"/>
+      <!-- Lace trim at stocking top -->
+      <path d="M80 334 Q89 330 98 334" stroke="#faf6ef" stroke-width="1.5" fill="none" opacity="0.7"/>
+      <path d="M102 334 Q111 330 120 334" stroke="#faf6ef" stroke-width="1.5" fill="none" opacity="0.7"/>
+
+      <!-- Boots (heeled) -->
+      <path d="M79 385 L98 385 L99 408 Q89 416 76 410 L76 400 Z" fill="#141414"/>
+      <path d="M102 385 L121 385 L123 400 L123 410 Q110 416 100 408 Z" fill="#141414"/>
+      <rect x="75" y="408" width="4" height="8" fill="#141414"/>
+      <rect x="120" y="408" width="4" height="8" fill="#141414"/>
+    </svg>
+    <div class="core-title">
+      <h1>ZOYA CORE</h1>
+      <p>AUTONOMOUS AI</p>
+    </div>
+  </div>
+
+  <div class="office-section">
+    <div class="office-grid">
+      <div class="room" id="roomOS">
+        <div class="room-header"><span>OS CONTROLLER</span><span id="stOS" style="color:var(--muted)">IDLE</span></div>
+        <div class="room-stage">
+          <div class="desk"><div class="pc-screen"></div></div>
+          <div class="pixel-agent" style="background-image: radial-gradient(circle, #4fd8ff 40%, transparent 40%);">
+            <div class="bubble">EXECUTING...</div>
+          </div>
+        </div>
+      </div>
+      <div class="room" id="roomSearch">
+        <div class="room-header"><span>SEARCH RESEARCH</span><span id="stSearch" style="color:var(--muted)">IDLE</span></div>
+        <div class="room-stage">
+          <div class="desk"><div class="pc-screen" style="background:var(--pink)"></div></div>
+          <div class="pixel-agent" style="background-image: radial-gradient(circle, #ff6fd8 40%, transparent 40%);">
+            <div class="bubble">SEARCHING WEB...</div>
+          </div>
+        </div>
+      </div>
+      <div class="room" id="roomVoice">
+        <div class="room-header"><span>VOICE SYNTH</span><span id="stVoice" style="color:var(--muted)">IDLE</span></div>
+        <div class="room-stage">
+          <div class="desk"><div class="pc-screen" style="background:var(--green)"></div></div>
+          <div class="pixel-agent" style="background-image: radial-gradient(circle, #00ffaa 40%, transparent 40%);">
+            <div class="bubble">SPEAKING...</div>
+          </div>
+        </div>
+      </div>
+      <div class="room">
+        <div class="room-header"><span>VISION AGENT</span><span style="color:var(--muted)">READY</span></div>
+        <div class="room-stage"><div class="desk"><div class="pc-screen"></div></div></div>
+      </div>
+      <div class="room">
+        <div class="room-header"><span>SYSTEM MONITOR</span><span style="color:var(--green)">98% HEALTH</span></div>
+        <div class="room-stage"><div class="desk"><div class="pc-screen"></div></div></div>
+      </div>
+      <div class="room">
+        <div class="room-header"><span>SECURITY AI</span><span style="color:var(--muted)">ACTIVE</span></div>
+        <div class="room-stage"><div class="desk"><div class="pc-screen"></div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hud-footer">
+    <div class="caption-box" id="caption">Bolo "Hey Zoya" ya text type karo...</div>
+    <div class="input-group">
+      <input type="text" id="textInput" placeholder="Command do Sohil Boss (e.g. 'Chrome kholo', 'Weather batao')...">
+      <button class="mic-btn" id="camBtn" style="background:var(--pink); box-shadow:0 0 12px var(--pink);" title="Camera se photo dikhao">CAM</button>
+      <button class="mic-btn" id="micBtn">MIC</button>
+    </div>
+  </div>
+
+  <!-- Camera modal -->
+  <div id="camModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:100; align-items:center; justify-content:center; flex-direction:column; gap:14px;">
+    <video id="camVideo" autoplay playsinline style="max-width:90vw; max-height:60vh; border-radius:12px; border:2px solid var(--cyan);"></video>
+    <canvas id="camCanvas" style="display:none;"></canvas>
+    <div style="display:flex; gap:12px;">
+      <button id="camCaptureBtn" style="background:var(--cyan); color:#000; border:none; padding:10px 22px; border-radius:20px; font-weight:bold; cursor:pointer;">CAPTURE</button>
+      <button id="camCloseBtn" style="background:var(--panel-bg); color:var(--text); border:1px solid var(--border-glow); padding:10px 22px; border-radius:20px; font-weight:bold; cursor:pointer;">CLOSE</button>
+    </div>
+    <div id="camStatus" style="color:var(--cyan); font-size:13px;"></div>
+  </div>
+</div>
+
+<script>
+// ---------- Robot face elements ----------
+const robotFace = document.getElementById('robotFace');
+const mouthShape = document.getElementById('mouthShape');
+let mouthInterval = null;
+
+function startMouthAnimation() {
+  if (robotFace) robotFace.classList.add('speaking');
+  if (!mouthShape) return;
+  stopMouthAnimation();
+  mouthInterval = setInterval(() => {
+    const h = 3 + Math.random() * 9;
+    mouthShape.setAttribute('height', h.toFixed(1));
+    mouthShape.setAttribute('y', (163 - h / 2).toFixed(1));
+  }, 110);
+}
+
+function stopMouthAnimation() {
+  if (mouthInterval) {
+    clearInterval(mouthInterval);
+    mouthInterval = null;
+  }
+  if (robotFace) robotFace.classList.remove('speaking');
+  if (mouthShape) {
+    mouthShape.setAttribute('height', 5);
+    mouthShape.setAttribute('y', 160);
+  }
+}
+
+// ---------- Elements ----------
+const statusText = document.getElementById('statusText');
+const caption = document.getElementById('caption');
+const textInput = document.getElementById('textInput');
+const micBtn = document.getElementById('micBtn');
+const studyBanner = document.getElementById('studyBanner');
+const enableStudyBtn = document.getElementById('enableStudyBtn');
+const enableMapBtn = document.getElementById('enableMapBtn');
+
+const roomOS = document.getElementById('roomOS');
+const roomSearch = document.getElementById('roomSearch');
+const roomVoice = document.getElementById('roomVoice');
+const stOS = document.getElementById('stOS');
+const stSearch = document.getElementById('stSearch');
+const stVoice = document.getElementById('stVoice');
+
+let isZoyaSpeaking = false;
+let conversationActive = false;
+
+// Tracks what Zoya last said, and when she finished, so the mic
+// can ignore the echo of her own voice coming back through the speaker.
+let lastSpokenText = "";
+let lastSpokenEndTime = 0;
+const ECHO_GUARD_MS = 700; // how long after speaking to be extra cautious
+
+// ---------- Study mode window (named target) ----------
+// Browsers only allow window.open() to create a BRAND NEW tab from a
+// direct user click/tap - voice-triggered commands are not treated as
+// a user gesture, so that gets silently blocked. But if a tab with a
+// given NAME already exists, window.open(url, thatName) just NAVIGATES
+// it - this is allowed from anywhere, voice included, and the browser
+// remembers the name itself (not our JavaScript), so it survives page
+// reloads, Flask auto-restarts, everything. No JS variable needed.
+const STUDY_WINDOW_NAME = "zoyaStudyWindow";
+const MAP_WINDOW_NAME = "zoyaMapWindow";
+
+function maybeHideBanner() {
+  if (enableStudyBtn.classList.contains('enabled') && enableMapBtn.classList.contains('enabled')) {
+    studyBanner.classList.add('hidden');
+  }
+}
+
+if (enableStudyBtn) {
+  enableStudyBtn.addEventListener('click', () => {
+    try {
+      const win = window.open('/study_waiting', STUDY_WINDOW_NAME);
+      if (win) {
+        enableStudyBtn.classList.add('enabled');
+        enableStudyBtn.textContent = 'STUDY MODE ✓';
+        maybeHideBanner();
+      }
+    } catch (e) {
+      console.error("Could not pre-open study-waiting tab:", e);
+    }
+  });
+}
+
+if (enableMapBtn) {
+  enableMapBtn.addEventListener('click', () => {
+    try {
+      const win = window.open('/map_waiting', MAP_WINDOW_NAME);
+      if (win) {
+        enableMapBtn.classList.add('enabled');
+        enableMapBtn.textContent = '3D MAP ✓';
+        maybeHideBanner();
+      }
+    } catch (e) {
+      console.error("Could not pre-open map-waiting tab:", e);
+    }
+  });
+}
+
+// ---------- Room Helpers ----------
+function setRoomWorking(room, statusEl, text, color = "var(--cyan)") {
+  if (room) room.classList.add('working');
+  if (statusEl) {
+    statusEl.textContent = text;
+    statusEl.style.color = color;
+  }
+}
+
+function resetRooms() {
+  [roomOS, roomSearch, roomVoice].forEach(r => r && r.classList.remove('working'));
+  if (stOS) { stOS.textContent = "IDLE"; stOS.style.color = "var(--muted)"; }
+  if (stSearch) { stSearch.textContent = "IDLE"; stSearch.style.color = "var(--muted)"; }
+  if (stVoice) { stVoice.textContent = "IDLE"; stVoice.style.color = "var(--muted)"; }
+}
+
+// ---------- Text similarity helper (for echo detection) ----------
+function normalize(str) {
+  return (str || "").toLowerCase().replace(/[^\u0900-\u097Fa-z0-9\s]/g, "").trim();
+}
+
+function wordOverlapRatio(a, b) {
+  const wordsA = normalize(a).split(/\s+/).filter(Boolean);
+  const wordsB = new Set(normalize(b).split(/\s+/).filter(Boolean));
+  if (wordsA.length === 0) return 0;
+  let matches = 0;
+  wordsA.forEach(w => { if (wordsB.has(w)) matches++; });
+  return matches / wordsA.length;
+}
+
+function isLikelyEcho(heard) {
+  if (!lastSpokenText) return false;
+  const since = Date.now() - lastSpokenEndTime;
+  if (since > 6000) return false;
+  const overlap = wordOverlapRatio(heard, lastSpokenText);
+  return overlap >= 0.6;
+}
+
+// ---------- Speech (returns a Promise that resolves when speaking ends) ----------
+function speakText(text) {
+  return new Promise((resolve) => {
+    if (!text || !('speechSynthesis' in window)) { resolve(); return; }
+
+    window.speechSynthesis.cancel();
+
+    setTimeout(() => {
+      const utter = new SpeechSynthesisUtterance(text);
+      const voices = window.speechSynthesis.getVoices();
+      const hindiVoice = voices.find(v => v.lang && v.lang.toLowerCase().includes('hi'));
+      if (hindiVoice) utter.voice = hindiVoice;
+
+      utter.lang = 'hi-IN';
+      utter.rate = 1.0;
+      utter.pitch = 1.05;
+
+      isZoyaSpeaking = true;
+      lastSpokenText = text;
+      setRoomWorking(roomVoice, stVoice, "SPEAKING", "var(--green)");
+      if (statusText) statusText.textContent = "ZOYA SPEAKING...";
+      startMouthAnimation();
+
+      utter.onend = () => {
+        isZoyaSpeaking = false;
+        lastSpokenEndTime = Date.now();
+        stopMouthAnimation();
+        resetRooms();
+        resolve();
+      };
+
+      utter.onerror = () => {
+        isZoyaSpeaking = false;
+        lastSpokenEndTime = Date.now();
+        stopMouthAnimation();
+        resetRooms();
+        resolve();
+      };
+
+      window.speechSynthesis.speak(utter);
+    }, 150);
+  });
+}
+
+// ---------- Study mode is now handled server-side ----------
+// The backend queues the topic (PENDING_STUDY_TOPIC) when it detects a
+// study request. The already-open /study_waiting tab polls for it and
+// navigates ITSELF - so there is nothing to do here except let the
+// person know, and remind them to enable it if they haven't yet.
+function notifyStudyModeQueued() {
+  caption.textContent += '  (Study tab khulne wala hai...)';
+}
+
+function notifyMapQueued() {
+  caption.textContent += '  (Map tab khulne wala hai...)';
+}
+
+// ---------- Backend call ----------
+async function sendToZoya(message) {
+  if (!message || !message.trim()) return;
+
+  caption.textContent = "Sohil Boss: " + message;
+  if (statusText) statusText.textContent = "PROCESSING...";
+  resetRooms();
+
+  const lower = message.toLowerCase();
+  if (lower.includes("chrome") || lower.includes("notepad") || lower.includes("shutdown") || lower.includes("volume") || lower.includes("battery") || lower.includes("kholo") || lower.includes("खोलो")) {
+    setRoomWorking(roomOS, stOS, "WORKING", "var(--cyan)");
+  } else if (lower.includes("youtube") || lower.includes("search") || lower.includes("यूट्यूब") || lower.includes("padhao") || lower.includes("पढ़ाओ") || lower.includes("samjhao") || lower.includes("समझाओ")) {
+    setRoomWorking(roomSearch, stSearch, "SEARCHING", "var(--pink)");
+  } else {
+    setRoomWorking(roomSearch, stSearch, "THINKING", "var(--pink)");
+  }
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: message.trim() })
+    });
+
+    const data = await res.json();
+    const reply = data.response || "जवाब नहीं मिला।";
+
+    caption.textContent = reply;
+
+    if (data.action === "open_study" && data.topic) {
+      notifyStudyModeQueued();
+    } else if (data.action === "open_map") {
+      notifyMapQueued();
+    }
+
+    await speakText(reply);
+
+  } catch (err) {
+    console.error(err);
+    const errorMsg = "सोहेल बॉस, सर्वर से कनेक्ट नहीं हो पा रहा है।";
+    caption.textContent = errorMsg;
+    await speakText(errorMsg);
+    resetRooms();
+  }
+}
+
+// ---------- Wake Word Listener ----------
+let wakeWordRecognizer = null;
+let wakeWordShouldRun = true;
+
+const WAKE_PATTERNS = ["hey zoya", "zoya", "हे जोया", "जोया", "जया", "ज़ोया", "जिया", "हे जया", "है जोया", "है जया"];
+
+function matchesWakeWord(transcript) {
+  return WAKE_PATTERNS.some(p => transcript.includes(p));
+}
+
+function initWakeWord() {
+  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    console.warn("Speech Recognition not supported");
+    return;
+  }
+  if (conversationActive) return;
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  wakeWordRecognizer = new SpeechRecognition();
+  wakeWordRecognizer.continuous = true;
+  wakeWordRecognizer.interimResults = true;
+  wakeWordRecognizer.lang = 'hi-IN';
+
+  let wakeTriggered = false;
+
+  wakeWordRecognizer.onresult = (event) => {
+    if (isZoyaSpeaking || wakeTriggered) return;
+
+    for (let i = event.resultIndex; i < event.results.length; ++i) {
+      const transcript = event.results[i][0].transcript.toLowerCase().trim();
+      console.log("Heard:", transcript);
+
+      if (isLikelyEcho(transcript)) continue;
+
+      if (matchesWakeWord(transcript)) {
+        wakeTriggered = true;
+        try { wakeWordRecognizer.onend = null; wakeWordRecognizer.stop(); } catch (e) {}
+        triggerZoyaListening();
+        break;
+      }
+    }
+  };
+
+  wakeWordRecognizer.onerror = () => {
+    if (wakeWordShouldRun && !conversationActive) {
+      setTimeout(() => { try { wakeWordRecognizer.start(); } catch (e) {} }, 1200);
+    }
+  };
+
+  wakeWordRecognizer.onend = () => {
+    if (wakeWordShouldRun && !conversationActive) {
+      try { wakeWordRecognizer.start(); } catch (e) {}
+    }
+  };
+
+  try { wakeWordRecognizer.start(); } catch (e) {}
+}
+
+function stopWakeWord() {
+  wakeWordShouldRun = false;
+  if (wakeWordRecognizer) {
+    try { wakeWordRecognizer.onend = null; wakeWordRecognizer.stop(); } catch (e) {}
+  }
+}
+
+// ---------- Conversation flow after wake word ----------
+function triggerZoyaListening() {
+  if (conversationActive) return;
+  conversationActive = true;
+  wakeWordShouldRun = false;
+  if (micBtn) micBtn.classList.add('listening');
+
+  const responseMsg = "हाँ सोहिल बॉस, बताइए क्या करूँ?";
+  caption.textContent = responseMsg;
+
+  speakText(responseMsg).then(() => {
+    setTimeout(() => listenForCommand(), ECHO_GUARD_MS);
+  });
+}
+
+function listenForCommand() {
+  if (!conversationActive) return;
+  if (statusText) statusText.textContent = "LISTENING COMMAND...";
+
+  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) return;
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const commandRec = new SpeechRecognition();
+  commandRec.lang = 'hi-IN';
+  commandRec.continuous = false;
+  commandRec.interimResults = false;
+
+  let commandCaptured = false;
+
+  commandRec.onresult = (e) => {
+    const cmd = e.results[0][0].transcript;
+    console.log("Heard (command):", cmd);
+
+    if (isLikelyEcho(cmd)) {
+      if (conversationActive) {
+        setTimeout(() => listenForCommand(), 300);
+      }
+      return;
+    }
+
+    commandCaptured = true;
+    if (cmd.trim()) {
+      textInput.value = cmd;
+      sendToZoya(cmd).then(() => {
+        if (conversationActive) {
+          setTimeout(() => listenForCommand(), ECHO_GUARD_MS);
+        }
+      });
+    }
+  };
+
+  commandRec.onspeechend = () => {
+    try { commandRec.stop(); } catch (e) {}
+  };
+
+  commandRec.onerror = (e) => {
+    if (e.error === 'no-speech') {
+      endConversation();
+    }
+  };
+
+  commandRec.onend = () => {
+    if (!commandCaptured && conversationActive) {
+      endConversation();
+    }
+  };
+
+  try { commandRec.start(); } catch (err) {}
+}
+
+function endConversation() {
+  conversationActive = false;
+  if (micBtn) micBtn.classList.remove('listening');
+  if (statusText) statusText.textContent = "WAKE-WORD ACTIVE";
+  caption.textContent = 'Bolo "Hey Zoya" ya text type karo...';
+  wakeWordShouldRun = true;
+  initWakeWord();
+}
+
+// ---------- Event Listeners ----------
+textInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    const val = textInput.value.trim();
+    if (val) {
+      sendToZoya(val);
+      textInput.value = '';
+    }
+  }
+});
+
+if (micBtn) micBtn.addEventListener('click', () => {
+  if (!conversationActive) triggerZoyaListening();
+});
+
+window.addEventListener('click', () => {
+  if (window.speechSynthesis) window.speechSynthesis.getVoices();
+}, { once: true });
+
+// ---------- Camera / Vision Feature ----------
+const camBtn = document.getElementById('camBtn');
+const camModal = document.getElementById('camModal');
+const camVideo = document.getElementById('camVideo');
+const camCanvas = document.getElementById('camCanvas');
+const camCaptureBtn = document.getElementById('camCaptureBtn');
+const camCloseBtn = document.getElementById('camCloseBtn');
+const camStatus = document.getElementById('camStatus');
+let camStream = null;
+
+async function openCamera() {
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({ video: true });
+    camVideo.srcObject = camStream;
+    camModal.style.display = 'flex';
+    camStatus.textContent = '';
+  } catch (e) {
+    console.error('Camera error:', e);
+    caption.textContent = 'सोहेल बॉस, camera access नहीं मिला। Browser permission check कीजिए।';
+  }
+}
+
+function closeCamera() {
+  if (camStream) {
+    camStream.getTracks().forEach(track => track.stop());
+    camStream = null;
+  }
+  camModal.style.display = 'none';
+}
+
+async function captureAndAnalyze() {
+  if (!camStream) return;
+  camCanvas.width = camVideo.videoWidth;
+  camCanvas.height = camVideo.videoHeight;
+  const ctx = camCanvas.getContext('2d');
+  ctx.drawImage(camVideo, 0, 0, camCanvas.width, camCanvas.height);
+
+  const dataUrl = camCanvas.toDataURL('image/jpeg', 0.85);
+  const base64 = dataUrl.split(',')[1];
+
+  camStatus.textContent = 'Zoya dekh rahi hai...';
+  camCaptureBtn.disabled = true;
+
+  try {
+    const res = await fetch('/api/vision', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: base64, question: textInput.value.trim() })
+    });
+    const data = await res.json();
+    const reply = data.response || 'जवाब नहीं मिला।';
+
+    closeCamera();
+    caption.textContent = reply;
+    await speakText(reply);
+  } catch (err) {
+    console.error('Vision request failed:', err);
+    camStatus.textContent = 'Error aaya, dobara try karo.';
+  } finally {
+    camCaptureBtn.disabled = false;
+  }
+}
+
+if (camBtn) camBtn.addEventListener('click', openCamera);
+if (camCloseBtn) camCloseBtn.addEventListener('click', closeCamera);
+if (camCaptureBtn) camCaptureBtn.addEventListener('click', captureAndAnalyze);
+
+window.addEventListener('load', () => {
+  wakeWordShouldRun = true;
+  initWakeWord();
+  if (window.speechSynthesis) window.speechSynthesis.getVoices();
+});
+</script>
+
+</body>
+</html>

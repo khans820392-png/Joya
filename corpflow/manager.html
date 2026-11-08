@@ -1,0 +1,32 @@
+<!doctype html><html lang="hi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>CorpFlow - Manager</title>
+<link rel="stylesheet" href="style2.css"></head><body>
+<h1>Manager · Arjun</h1><p class="sub">Target ko team me baanto</p>
+<div class="panel"><label>Total target</label><div class="big" id="total">₹0</div></div>
+<div class="panel" id="form"></div>
+<script type="module">
+import { ref, EMPLOYEES, inr, updateDoc, onSnapshot } from "./firebase.js";
+const $ = id => document.getElementById(id);
+let total = 0, built = false;
+
+$("form").innerHTML = EMPLOYEES.map(e => `<label for="a_${e.id}">${e.name}</label><input id="a_${e.id}" type="number" inputmode="numeric"><div style="height:10px"></div>`).join("")
+  + `<button id="split">Assign to team</button><div class="msg" id="msg"></div>`;
+
+$("split").onclick = async () => {
+  const assign = {}; let sum = 0;
+  EMPLOYEES.forEach(e => { assign[e.id] = Number($("a_" + e.id).value) || 0; sum += assign[e.id]; });
+  if (sum !== total) { $("msg").textContent = `Total ${inr(sum)} hai, target ${inr(total)} hona chahiye.`; return; }
+  await updateDoc(ref, { assign, status: "split" });
+  $("msg").textContent = "Team ko assign ho gaya ✔";
+};
+
+onSnapshot(ref, snap => {
+  const d = snap.data(); if (!d) return;
+  total = d.total; $("total").textContent = inr(total);
+  if (d.status === "sent" && !built) {            // naya target aaya -> barabar bhaag bhar do
+    EMPLOYEES.forEach((e, i) => $("a_" + e.id).value = Math.floor(total / 3) + (i === 0 ? total - Math.floor(total / 3) * 3 : 0));
+    built = true;
+  }
+  if (d.status !== "sent") built = false;
+});
+</script></body></html>

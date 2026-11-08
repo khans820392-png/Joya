@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zoya - Hamirpur Flood Simulation (Educational Demo)</title>
+<style>
+  :root {
+    --bg-dark: #050811;
+    --panel-bg: rgba(10, 16, 30, 0.85);
+    --border-glow: rgba(79, 216, 255, 0.3);
+    --cyan: #4fd8ff;
+    --amber: #ffcc66;
+    --red: #ff5f5f;
+    --green: #00ffaa;
+    --text: #eaf6ff;
+    --muted: #8fa3b8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg-dark);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    color: var(--text);
+    overflow: hidden;
+  }
+  #canvasWrap { position: absolute; inset: 0; }
+
+  /* ---------- Permanent educational disclaimer banner ---------- */
+  .edu-banner {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    background: linear-gradient(90deg, rgba(255,95,95,0.25), rgba(255,204,102,0.2));
+    border-bottom: 1px solid var(--amber);
+    padding: 10px 18px;
+    font-size: 12px;
+    text-align: center;
+    color: var(--amber);
+    z-index: 20;
+    letter-spacing: 0.3px;
+  }
+  .edu-banner b { color: #fff; }
+
+  .top-title {
+    position: absolute;
+    top: 46px; left: 20px;
+    z-index: 15;
+  }
+  .top-title h1 {
+    font-size: 18px; letter-spacing: 2px; color: var(--cyan);
+    text-shadow: 0 0 10px var(--cyan);
+  }
+  .top-title p { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+  /* ---------- Control panel ---------- */
+  .panel {
+    position: absolute;
+    bottom: 20px; left: 20px; right: 20px;
+    max-width: 520px;
+    background: var(--panel-bg);
+    border: 1px solid var(--border-glow);
+    border-radius: 16px;
+    padding: 18px 20px;
+    backdrop-filter: blur(10px);
+    z-index: 15;
+  }
+  .panel h3 {
+    font-size: 12px; letter-spacing: 1.5px; color: var(--cyan); margin-bottom: 10px;
+  }
+  .slider-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .slider-row input[type="range"] {
+    flex: 1;
+    accent-color: var(--cyan);
+    height: 4px;
+  }
+  .rain-value {
+    font-size: 15px; font-weight: bold; color: var(--amber);
+    min-width: 70px; text-align: right;
+  }
+  .status-line {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 8px;
+    min-height: 18px;
+  }
+  .status-line.danger { color: var(--red); font-weight: bold; }
+  .status-line.warn { color: var(--amber); font-weight: bold; }
+  .status-line.safe { color: var(--green); }
+
+  .legend {
+    display: flex; gap: 14px; margin-top: 10px; font-size: 10px; color: var(--muted);
+  }
+  .legend span { display: flex; align-items: center; gap: 5px; }
+  .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+  /* ---------- Live weather panel ---------- */
+  .weather-panel {
+    position: absolute;
+    top: 46px; right: 20px;
+    width: 220px;
+    background: var(--panel-bg);
+    border: 1px solid var(--border-glow);
+    border-radius: 16px;
+    padding: 16px 18px;
+    backdrop-filter: blur(10px);
+    z-index: 15;
+  }
+  .weather-panel h3 {
+    font-size: 11px; letter-spacing: 1.5px; color: var(--cyan); margin-bottom: 10px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .weather-live-dot {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--green);
+    box-shadow: 0 0 8px var(--green); animation: wpulse 1.4s infinite;
+  }
+  @keyframes wpulse { 0%,100%{opacity:0.4;} 50%{opacity:1;} }
+  .weather-main { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .weather-temp { font-size: 30px; font-weight: bold; color: var(--text); }
+  .weather-desc { font-size: 11px; color: var(--muted); }
+  .weather-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px;
+    font-size: 11px; color: var(--muted); margin-top: 6px;
+    border-top: 1px dashed rgba(79,216,255,0.2); padding-top: 8px;
+  }
+  .weather-grid b { color: var(--text); }
+  .weather-panel.loading .weather-desc { color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="edu-banner">
+  📚 <b>EDUCATIONAL DEMO ONLY</b> — Ye simulated/sample data par based hai, asli flood warning nahi hai. Real alerts ke liye IMD (mausam.imd.gov.in) aur NDMA ki official advisory dekhein.
+</div>
+
+<div class="top-title">
+  <h1>HAMIRPUR FLOOD SIMULATION</h1>
+  <p>3D Educational Model — Yamuna &amp; Betwa confluence area (stylized terrain)</p>
+</div>
+
+<div class="weather-panel loading" id="weatherPanel">
+  <h3>LIVE WEATHER — HAMIRPUR <span class="weather-live-dot" id="weatherDot"></span></h3>
+  <div class="weather-main">
+    <div class="weather-temp" id="wTemp">--°</div>
+    <div class="weather-desc" id="wDesc">Loading...</div>
+  </div>
+  <div class="weather-grid">
+    <div>Humidity: <b id="wHumidity">--</b></div>
+    <div>Wind: <b id="wWind">--</b></div>
+    <div>Rain (now): <b id="wRain">--</b></div>
+    <div>Updated: <b id="wTime">--</b></div>
+  </div>
+</div>
+
+<div id="canvasWrap"></div>
+
+<div class="panel">
+  <h3>RAINFALL SIMULATION</h3>
+  <div class="slider-row">
+    <input type="range" id="rainSlider" min="0" max="300" value="0" step="5">
+    <div class="rain-value" id="rainValue">0 mm</div>
+  </div>
+  <div class="status-line" id="statusLine">Slider ghuma kar dekho low-lying areas mein pani kaise bharta hai.</div>
+  <div class="legend">
+    <span><span class="swatch" style="background:#2a4a3a"></span> Safe zone</span>
+    <span><span class="swatch" style="background:var(--amber)"></span> At-risk zone</span>
+    <span><span class="swatch" style="background:var(--red)"></span> Flooded zone</span>
+    <span><span class="swatch" style="background:var(--cyan)"></span> Water</span>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+// =========================================================
+// Hamirpur Flood Simulation - EDUCATIONAL DEMO
+// Terrain heights below are STYLIZED/ILLUSTRATIVE, not real
+// elevation survey data. This is for presentation purposes.
+// =========================================================
+
+const canvasWrap = document.getElementById('canvasWrap');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050811);
+scene.fog = new THREE.Fog(0x050811, 30, 90);
+
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(26, 22, 30);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+canvasWrap.appendChild(renderer.domElement);
+
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.07;
+controls.maxPolarAngle = Math.PI / 2.1;
+controls.minDistance = 10;
+controls.maxDistance = 60;
+
+// ---------- Lighting ----------
+scene.add(new THREE.AmbientLight(0x6688aa, 0.8));
+const sun = new THREE.DirectionalLight(0xffffff, 1.1);
+sun.position.set(20, 35, 10);
+scene.add(sun);
+const rim = new THREE.DirectionalLight(0x4fd8ff, 0.4);
+rim.position.set(-20, 10, -15);
+scene.add(rim);
+
+// ---------- Terrain grid (stylized height map) ----------
+// Each cell: [x, z, heightUnits]. Lower height = more flood-prone.
+// These values are illustrative - representing the general idea that
+// areas near the river confluence sit lower than surrounding land.
+const GRID_SIZE = 20;
+const CELL_SIZE = 2;
+const terrainGroup = new THREE.Group();
+const cells = [];
+
+function heightAt(x, z) {
+  // Simple procedural "bowl toward center-river" shape + some noise,
+  // purely for a plausible-looking stylized terrain.
+  const cx = x - GRID_SIZE / 2;
+  const cz = z - GRID_SIZE / 2;
+  const riverDist = Math.abs(cz - (Math.sin(cx * 0.3) * 2)); // winding river line
+  let h = 1.2 + riverDist * 0.28;
+  h += (Math.sin(x * 0.6) + Math.cos(z * 0.5)) * 0.25;
+  h = Math.max(0.15, h);
+  return h;
+}
+
+const geoBase = new THREE.BoxGeometry(CELL_SIZE * 0.95, 1, CELL_SIZE * 0.95);
+
+for (let x = 0; x < GRID_SIZE; x++) {
+  for (let z = 0; z < GRID_SIZE; z++) {
+    const h = heightAt(x, z);
+    const mat = new THREE.MeshStandardMaterial({ color: 0x2a4a3a, roughness: 0.9 });
+    const cube = new THREE.Mesh(geoBase, mat);
+    cube.scale.y = h * 2;
+    cube.position.set(
+      (x - GRID_SIZE / 2) * CELL_SIZE,
+      (h * 2) / 2 - 1,
+      (z - GRID_SIZE / 2) * CELL_SIZE
+    );
+    terrainGroup.add(cube);
+    cells.push({ mesh: cube, height: h, baseMat: mat });
+  }
+}
+scene.add(terrainGroup);
+
+// ---------- Water plane ----------
+const waterGeo = new THREE.PlaneGeometry(GRID_SIZE * CELL_SIZE * 1.3, GRID_SIZE * CELL_SIZE * 1.3);
+const waterMat = new THREE.MeshStandardMaterial({
+  color: 0x4fd8ff, transparent: true, opacity: 0.55, roughness: 0.1, metalness: 0.2
+});
+const water = new THREE.Mesh(waterGeo, waterMat);
+water.rotation.x = -Math.PI / 2;
+water.position.y = -1;
+scene.add(water);
+
+// ---------- Rainfall -> water level + cell coloring ----------
+const rainSlider = document.getElementById('rainSlider');
+const rainValue = document.getElementById('rainValue');
+const statusLine = document.getElementById('statusLine');
+
+const SAFE_COLOR = new THREE.Color(0x2a4a3a);
+const WARN_COLOR = new THREE.Color(0xffcc66);
+const FLOOD_COLOR = new THREE.Color(0xff5f5f);
+
+function updateSimulation(rainMm) {
+  // Illustrative mapping: rainfall (mm) -> water level in scene units.
+  const waterLevel = -1 + (rainMm / 300) * 2.6;
+  water.position.y = waterLevel;
+
+  let floodedCount = 0;
+  let atRiskCount = 0;
+
+  cells.forEach(c => {
+    const terrainTop = (c.height * 2) - 1;
+    const diff = terrainTop - waterLevel;
+    let color;
+    if (diff < 0) {
+      color = FLOOD_COLOR;
+      floodedCount++;
+    } else if (diff < 0.9) {
+      color = WARN_COLOR;
+      atRiskCount++;
+    } else {
+      color = SAFE_COLOR;
+    }
+    c.mesh.material.color.copy(color);
+  });
+
+  const floodPct = Math.round((floodedCount / cells.length) * 100);
+
+  if (rainMm === 0) {
+    statusLine.className = 'status-line';
+    statusLine.textContent = 'Slider ghuma kar dekho low-lying areas mein pani kaise bharta hai.';
+  } else if (floodPct > 35) {
+    statusLine.className = 'status-line danger';
+    statusLine.textContent = `⚠ Simulated: ~${floodPct}% low-lying area jalmagna ho sakta hai is rainfall level par.`;
+  } else if (floodPct > 10 || atRiskCount > 0) {
+    statusLine.className = 'status-line warn';
+    statusLine.textContent = `Kuch areas at-risk zone mein hain (~${floodPct}% flooded in simulation).`;
+  } else {
+    statusLine.className = 'status-line safe';
+    statusLine.textContent = 'Is rainfall level par zyada tar area safe simulate ho raha hai.';
+  }
+}
+
+rainSlider.addEventListener('input', () => {
+  const mm = parseInt(rainSlider.value, 10);
+  rainValue.textContent = mm + ' mm';
+  updateSimulation(mm);
+});
+
+updateSimulation(0);
+
+// ---------- Live Weather (Open-Meteo - free, no API key needed) ----------
+// Hamirpur, UP approx coordinates
+const HAMIRPUR_LAT = 25.95;
+const HAMIRPUR_LON = 80.15;
+
+const WEATHER_CODE_DESC = {
+  0: "Saaf aasman", 1: "Mostly saaf", 2: "Thodi badli", 3: "Badli chhayi hui",
+  45: "Dhund", 48: "Dhund", 51: "Halki boondabandi", 53: "Boondabandi",
+  55: "Tez boondabandi", 61: "Halki baarish", 63: "Baarish", 65: "Tez baarish",
+  71: "Halki barf", 73: "Barf", 75: "Tez barf", 80: "Halki jhadi",
+  81: "Jhadi", 82: "Tez jhadi", 95: "Toofan/Garaj", 96: "Toofan ke saath ole", 99: "Bhayankar toofan"
+};
+
+async function loadLiveWeather() {
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${HAMIRPUR_LAT}&longitude=${HAMIRPUR_LON}&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m&timezone=Asia%2FKolkata`;
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    const c = data.current;
+
+    document.getElementById('wTemp').textContent = Math.round(c.temperature_2m) + '°C';
+    document.getElementById('wDesc').textContent = WEATHER_CODE_DESC[c.weather_code] || 'Mausam data';
+    document.getElementById('wHumidity').textContent = c.relative_humidity_2m + '%';
+    document.getElementById('wWind').textContent = Math.round(c.wind_speed_10m) + ' km/h';
+    document.getElementById('wRain').textContent = c.precipitation + ' mm';
+
+    const t = new Date(c.time);
+    document.getElementById('wTime').textContent = t.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+    document.getElementById('weatherPanel').classList.remove('loading');
+  } catch (err) {
+    console.error('Weather fetch failed:', err);
+    document.getElementById('wDesc').textContent = 'Load nahi hua';
+    document.getElementById('weatherDot').style.background = '#ff5f5f';
+  }
+}
+
+loadLiveWeather();
+setInterval(loadLiveWeather, 10 * 60 * 1000); // refresh every 10 minutes
+
+// ---------- Resize ----------
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ---------- Render loop ----------
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+
+</body>
+</html>

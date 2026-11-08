@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zoya - AI Flood Dashboard (Educational Demo)</title>
+<style>
+  :root {
+    --bg-dark: #050811;
+    --panel-bg: rgba(10, 16, 30, 0.88);
+    --border-glow: rgba(79, 216, 255, 0.3);
+    --cyan: #4fd8ff;
+    --amber: #ffcc66;
+    --red: #ff5f5f;
+    --orange: #ff9955;
+    --green: #00ffaa;
+    --muted: #8fa3b8;
+    --text: #eaf6ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; background: var(--bg-dark); overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; color: var(--text); }
+
+  /* ---------- Header ---------- */
+  .header {
+    position: absolute; top: 0; left: 0; right: 0; height: 56px;
+    background: rgba(5,8,17,0.9); border-bottom: 1px solid var(--border-glow);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 20px; z-index: 20;
+  }
+  .header .brand { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: bold; color: var(--cyan); letter-spacing: 0.5px; }
+  .header .brand span.sub { font-weight: normal; color: var(--muted); font-size: 10px; display: block; letter-spacing: 1px; }
+  .header nav { display: flex; gap: 22px; font-size: 12px; color: var(--muted); }
+  .header nav a { color: inherit; text-decoration: none; cursor: pointer; }
+  .header nav a.active { color: var(--cyan); }
+  .header nav a:hover { color: var(--cyan); }
+
+  /* ---------- Educational banner ---------- */
+  .edu-banner {
+    position: absolute; top: 56px; left: 0; right: 0;
+    background: linear-gradient(90deg, rgba(255,95,95,0.2), rgba(255,204,102,0.15));
+    border-bottom: 1px solid var(--amber);
+    padding: 7px 18px; font-size: 11px; text-align: center; color: var(--amber);
+    z-index: 19;
+  }
+  .edu-banner b { color: #fff; }
+
+  #canvasWrap { position: absolute; top: 86px; left: 0; right: 0; bottom: 0; }
+
+  /* ---------- Side panels ---------- */
+  .side-stack {
+    position: absolute; top: 100px; right: 20px; width: 260px;
+    display: flex; flex-direction: column; gap: 14px; z-index: 15;
+  }
+  .panel-box {
+    background: var(--panel-bg); border: 1px solid var(--border-glow);
+    border-radius: 14px; padding: 14px 16px; backdrop-filter: blur(10px);
+  }
+  .panel-box h3 {
+    font-size: 11px; letter-spacing: 1.3px; color: var(--cyan);
+    margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 1.4s infinite; }
+  @keyframes pulse { 0%,100%{opacity:0.4;} 50%{opacity:1;} }
+
+  /* Weather */
+  .weather-main { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .weather-temp { font-size: 28px; font-weight: bold; }
+  .weather-desc { font-size: 11px; color: var(--muted); }
+  .weather-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px;
+    font-size: 11px; color: var(--muted); border-top: 1px dashed rgba(79,216,255,0.2); padding-top: 8px;
+  }
+  .weather-grid b { color: var(--text); }
+
+  /* Flood risk legend */
+  .risk-row { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 4px 0; color: var(--text); }
+  .risk-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .risk-note {
+    margin-top: 8px; font-size: 11px; color: var(--amber);
+    background: rgba(255,204,102,0.1); border-radius: 8px; padding: 8px 10px;
+  }
+
+  /* Alerts */
+  .alerts-disclaimer { font-size: 10px; color: var(--amber); margin-bottom: 8px; }
+  .alert-row { display: flex; gap: 8px; padding: 7px 0; border-bottom: 1px dashed rgba(79,216,255,0.12); font-size: 11.5px; }
+  .alert-row:last-child { border-bottom: none; }
+  .alert-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+  .alert-text b { display: block; color: var(--text); font-weight: 600; }
+  .alert-text span { color: var(--muted); font-size: 10px; }
+
+  .hint {
+    position: absolute; bottom: 16px; left: 20px;
+    background: var(--panel-bg); border: 1px solid var(--border-glow);
+    padding: 7px 16px; border-radius: 20px; font-size: 11px; color: var(--cyan);
+    z-index: 15; backdrop-filter: blur(8px);
+  }
+
+  .toast {
+    position: absolute; top: 110px; left: 50%; transform: translateX(-50%);
+    background: rgba(255,204,102,0.15); border: 1px solid var(--amber);
+    padding: 10px 20px; border-radius: 10px; font-size: 13px; color: var(--amber);
+    z-index: 25; opacity: 0; transition: opacity 0.3s; pointer-events: none;
+    max-width: 90%; text-align: center;
+  }
+  .toast.show { opacity: 1; }
+
+  .loader {
+    position: absolute; top: 86px; left: 0; right: 0; bottom: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    z-index: 30; background: var(--bg-dark);
+  }
+  .loader .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 16px var(--cyan); animation: pulse 1.2s infinite; }
+  .loader p { font-size: 13px; color: var(--muted); }
+  .loader.hidden { display: none; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="brand">
+    🌊 AI FLOOD DASHBOARD
+    <span class="sub">EDUCATIONAL DEMO — ZOYA PROJECT</span>
+  </div>
+  <nav>
+    <a href="/">Home</a>
+    <a class="active">Map</a>
+    <a href="#" onclick="document.querySelector('.side-stack').scrollIntoView({behavior:'smooth'}); return false;">Alerts</a>
+  </nav>
+</div>
+
+<div class="edu-banner">
+  📚 <b>EDUCATIONAL DEMO</b> — Map real hai, lekin weather forecast-based hai aur flood risk/alerts sample data hain. Real warnings ke liye IMD / NDMA dekhein.
+</div>
+
+<div id="canvasWrap"></div>
+<div class="toast" id="toast"></div>
+<div class="hint">Mouse se ghumao • Uttar Pradesh par click karo</div>
+<div class="loader" id="loader"><div class="dot"></div><p>Map load ho raha hai...</p></div>
+
+<div class="side-stack">
+  <div class="panel-box">
+    <h3>LIVE WEATHER — NEW DELHI <span class="live-dot" id="weatherDot"></span></h3>
+    <div class="weather-main">
+      <div class="weather-temp" id="wTemp">--°</div>
+      <div class="weather-desc" id="wDesc">Loading...</div>
+    </div>
+    <div class="weather-grid">
+      <div>Humidity: <b id="wHumidity">--</b></div>
+      <div>Wind: <b id="wWind">--</b></div>
+      <div>Rain (now): <b id="wRain">--</b></div>
+      <div>Updated: <b id="wTime">--</b></div>
+    </div>
+  </div>
+
+  <div class="panel-box">
+    <h3>FLOOD RISK (SAMPLE)</h3>
+    <div class="risk-row"><span class="risk-dot" style="background:var(--red)"></span> Very High</div>
+    <div class="risk-row"><span class="risk-dot" style="background:var(--orange)"></span> High</div>
+    <div class="risk-row"><span class="risk-dot" style="background:var(--amber)"></span> Moderate</div>
+    <div class="risk-row"><span class="risk-dot" style="background:var(--green)"></span> Low</div>
+    <div class="risk-note">Abhi sirf Hamirpur (UP) ka 3D flood simulation ready hai — <a href="/india-map2" style="color:var(--cyan)">map se explore karo</a>.</div>
+  </div>
+
+  <div class="panel-box">
+    <h3>RECENT ALERTS</h3>
+    <div class="alerts-disclaimer">⚠ Sample/demo alerts hain — real-time nahi</div>
+    <div class="alert-row">
+      <span class="alert-dot" style="background:var(--red)"></span>
+      <div class="alert-text"><b>Heavy rainfall simulated</b><span>Demo alert — Hamirpur area, sample scenario</span></div>
+    </div>
+    <div class="alert-row">
+      <span class="alert-dot" style="background:var(--orange)"></span>
+      <div class="alert-text"><b>Flood risk increased (demo)</b><span>Sample scenario — educational purpose</span></div>
+    </div>
+    <div class="alert-row">
+      <span class="alert-dot" style="background:var(--amber)"></span>
+      <div class="alert-text"><b>River level rising (sample)</b><span>Illustrative data, not from a live sensor</span></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+// =========================================================
+// Dashboard: real India state map (same data/approach as
+// india_map.html) + live weather + sample flood-risk/alerts.
+// =========================================================
+
+const GEOJSON_URL = "https://cdn.jsdelivr.net/gh/udit-001/india-maps-data@cc91a19/geojson/india.geojson";
+const TARGET_STATE = "uttar pradesh";
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050811);
+scene.fog = new THREE.Fog(0x050811, 40, 110);
+
+const canvasWrap = document.getElementById('canvasWrap');
+const camera = new THREE.PerspectiveCamera(50, canvasWrap.clientWidth / canvasWrap.clientHeight, 0.1, 1000);
+camera.position.set(0, 30, 26);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(canvasWrap.clientWidth, canvasWrap.clientHeight);
+canvasWrap.appendChild(renderer.domElement);
+
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.maxPolarAngle = Math.PI / 2.1;
+
+scene.add(new THREE.AmbientLight(0x6688aa, 0.9));
+const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+sun.position.set(20, 35, 15);
+scene.add(sun);
+
+function makeLabel(text, color = '#eaf6ff', scale = 1) {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = 256; canvas.height = 56;
+  ctx.font = 'bold 24px Segoe UI, sans-serif';
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 128, 28);
+  const tex = new THREE.CanvasTexture(canvas);
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(3.6 * scale, 0.8 * scale, 1);
+  return sprite;
+}
+
+function getFeatureName(props) {
+  const candidates = ['st_nm', 'STATE', 'NAME_1', 'name', 'NAME', 'State', 'state_name', 'ST_NM'];
+  for (const key of candidates) {
+    if (props && props[key]) return String(props[key]);
+  }
+  if (props) {
+    for (const k in props) {
+      if (typeof props[k] === 'string') return props[k];
+    }
+  }
+  return 'Unknown';
+}
+
+function ringToShapePoints(ring, project) {
+  return ring.map(([lon, lat]) => {
+    const p = project(lon, lat);
+    return new THREE.Vector2(p.x, p.y);
+  });
+}
+
+function polygonToShapes(coords, project) {
+  const shape = new THREE.Shape(ringToShapePoints(coords[0], project));
+  for (let i = 1; i < coords.length; i++) {
+    shape.holes.push(new THREE.Path(ringToShapePoints(coords[i], project)));
+  }
+  return [shape];
+}
+
+function geometryToShapes(geometry, project) {
+  if (!geometry) return [];
+  if (geometry.type === 'Polygon') return polygonToShapes(geometry.coordinates, project);
+  if (geometry.type === 'MultiPolygon') {
+    let shapes = [];
+    geometry.coordinates.forEach(poly => { shapes = shapes.concat(polygonToShapes(poly, project)); });
+    return shapes;
+  }
+  return [];
+}
+
+function computeBounds(features) {
+  let minLon = Infinity, maxLon = -Infinity, minLat = Infinity, maxLat = -Infinity;
+  function scanCoords(coords, depth) {
+    if (depth === 0) {
+      const [lon, lat] = coords;
+      if (lon < minLon) minLon = lon;
+      if (lon > maxLon) maxLon = lon;
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+    } else {
+      coords.forEach(c => scanCoords(c, depth - 1));
+    }
+  }
+  features.forEach(f => {
+    if (!f.geometry) return;
+    const depth = f.geometry.type === 'Polygon' ? 2 : 3;
+    scanCoords(f.geometry.coordinates, depth);
+  });
+  return { minLon, maxLon, minLat, maxLat };
+}
+
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+const clickable = [];
+const toast = document.getElementById('toast');
+const loader = document.getElementById('loader');
+let toastTimer = null;
+
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2400);
+}
+
+fetch(GEOJSON_URL)
+  .then(r => r.json())
+  .then(geo => {
+    const features = geo.features || [];
+    const bounds = computeBounds(features);
+    const centerLon = (bounds.minLon + bounds.maxLon) / 2;
+    const centerLat = (bounds.minLat + bounds.maxLat) / 2;
+    const spanLon = Math.max(0.0001, bounds.maxLon - bounds.minLon);
+    const spanLat = Math.max(0.0001, bounds.maxLat - bounds.minLat);
+    const TARGET_WIDTH = 34;
+    const scale = TARGET_WIDTH / Math.max(spanLon, spanLat);
+
+    function project(lon, lat) {
+      return { x: (lon - centerLon) * scale, y: -(lat - centerLat) * scale };
+    }
+
+    let targetLabeled = false;
+
+    features.forEach(feature => {
+      const name = getFeatureName(feature.properties);
+      const isTarget = name.toLowerCase().includes(TARGET_STATE);
+      const shapes = geometryToShapes(feature.geometry, project);
+      if (shapes.length === 0) return;
+
+      shapes.forEach(shape => {
+        const extrudeSettings = { depth: isTarget ? 0.9 : 0.35, bevelEnabled: false };
+        const geom = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+        const mat = new THREE.MeshStandardMaterial({
+          color: isTarget ? 0x4fd8ff : 0x27384d,
+          emissive: isTarget ? 0x0d4a5c : 0x000000,
+          emissiveIntensity: isTarget ? 0.55 : 0,
+          roughness: 0.6,
+          side: THREE.DoubleSide,
+        });
+        const mesh = new THREE.Mesh(geom, mat);
+        mesh.rotation.x = -Math.PI / 2;
+        mesh.userData = { name, active: isTarget };
+        scene.add(mesh);
+        clickable.push(mesh);
+      });
+
+      if (isTarget && !targetLabeled) {
+        const fb = computeBounds(features.filter(f => getFeatureName(f.properties).toLowerCase().includes(TARGET_STATE)));
+        const c = project((fb.minLon + fb.maxLon) / 2, (fb.minLat + fb.maxLat) / 2);
+        const label = makeLabel(name, '#4fd8ff', 1.1);
+        label.position.set(c.x, 1.2, c.y);
+        scene.add(label);
+        targetLabeled = true;
+      }
+    });
+
+    loader.classList.add('hidden');
+  })
+  .catch(err => {
+    console.error('Failed to load map data:', err);
+    loader.querySelector('p').textContent = 'Map data load nahi ho paya - internet connection check karo.';
+  });
+
+function onClick(event) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObjects(clickable);
+  if (hits.length > 0) {
+    const data = hits[0].object.userData;
+    if (data.active) {
+      showToast(data.name + " khola ja raha hai...");
+      setTimeout(() => { location.href = '/up-districts2'; }, 500);
+    } else {
+      showToast(data.name + " — Coming Soon");
+    }
+  }
+}
+renderer.domElement.addEventListener('click', onClick);
+
+window.addEventListener('resize', () => {
+  camera.aspect = canvasWrap.clientWidth / canvasWrap.clientHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(canvasWrap.clientWidth, canvasWrap.clientHeight);
+});
+
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+// ---------- Live Weather (Open-Meteo - free, no API key needed) ----------
+const DELHI_LAT = 28.6139;
+const DELHI_LON = 77.2090;
+
+const WEATHER_CODE_DESC = {
+  0: "Saaf aasman", 1: "Mostly saaf", 2: "Thodi badli", 3: "Badli chhayi hui",
+  45: "Dhund", 48: "Dhund", 51: "Halki boondabandi", 53: "Boondabandi",
+  55: "Tez boondabandi", 61: "Halki baarish", 63: "Baarish", 65: "Tez baarish",
+  71: "Halki barf", 73: "Barf", 75: "Tez barf", 80: "Halki jhadi",
+  81: "Jhadi", 82: "Tez jhadi", 95: "Toofan/Garaj", 96: "Toofan ke saath ole", 99: "Bhayankar toofan"
+};
+
+async function loadLiveWeather() {
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${DELHI_LAT}&longitude=${DELHI_LON}&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m&timezone=Asia%2FKolkata`;
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    const c = data.current;
+    document.getElementById('wTemp').textContent = Math.round(c.temperature_2m) + '°C';
+    document.getElementById('wDesc').textContent = WEATHER_CODE_DESC[c.weather_code] || 'Mausam data';
+    document.getElementById('wHumidity').textContent = c.relative_humidity_2m + '%';
+    document.getElementById('wWind').textContent = Math.round(c.wind_speed_10m) + ' km/h';
+    document.getElementById('wRain').textContent = c.precipitation + ' mm';
+    const t = new Date(c.time);
+    document.getElementById('wTime').textContent = t.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  } catch (err) {
+    console.error('Weather fetch failed:', err);
+    document.getElementById('wDesc').textContent = 'Load nahi hua';
+    document.getElementById('weatherDot').style.background = '#ff5f5f';
+  }
+}
+loadLiveWeather();
+setInterval(loadLiveWeather, 10 * 60 * 1000);
+</script>
+
+</body>
+</html>

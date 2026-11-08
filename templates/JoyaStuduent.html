@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zoya - Study Mode</title>
+<style>
+  :root {
+    --bg-dark: #050811;
+    --panel-bg: rgba(10, 16, 30, 0.85);
+    --border-glow: rgba(79, 216, 255, 0.3);
+    --cyan: #4fd8ff;
+    --pink: #ff6fd8;
+    --green: #00ffaa;
+    --amber: #ffcc66;
+    --text: #eaf6ff;
+    --muted: #627b9b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body, html {
+    width: 100%; height: 100%;
+    background: var(--bg-dark);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    color: var(--text);
+    overflow: hidden;
+  }
+  .wrap {
+    width: 100vw; height: 100vh;
+    display: flex; flex-direction: column;
+    padding: 20px;
+    background: radial-gradient(circle at 50% 10%, #0c1830 0%, #050811 70%);
+  }
+  .top-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 14px;
+  }
+  .top-bar h2 {
+    color: var(--cyan); letter-spacing: 2px; font-size: 18px;
+    text-shadow: 0 0 10px var(--cyan);
+  }
+  .status-pill {
+    background: var(--panel-bg); border: 1px solid var(--border-glow);
+    padding: 5px 14px; border-radius: 20px; font-size: 12px;
+    color: var(--cyan); letter-spacing: 1px;
+  }
+  .main-area {
+    flex: 1; display: flex; gap: 16px; min-height: 0;
+  }
+
+  /* ---------- Whiteboard ---------- */
+  .whiteboard-container {
+    flex: 3;
+    background: var(--panel-bg);
+    border: 1px solid var(--border-glow);
+    border-radius: 16px;
+    padding: 30px 36px;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 0 30px rgba(0,0,0,0.5);
+  }
+  .whiteboard-text {
+    font-size: 20px;
+    line-height: 1.9;
+    color: var(--text);
+    white-space: pre-wrap;
+  }
+  .cursor-blink {
+    display: inline-block;
+    width: 3px;
+    height: 22px;
+    background: var(--cyan);
+    margin-left: 2px;
+    vertical-align: middle;
+    animation: blinkCursor 0.8s infinite;
+    box-shadow: 0 0 8px var(--cyan);
+  }
+  @keyframes blinkCursor { 0%,100%{opacity:1;} 50%{opacity:0;} }
+
+  .important-highlight {
+    background: linear-gradient(90deg, rgba(255,204,102,0.25), transparent);
+    border-left: 3px solid var(--amber);
+    padding: 4px 10px;
+    margin: 6px 0;
+    border-radius: 4px;
+    animation: popIn 0.4s ease-out;
+  }
+  @keyframes popIn { 0%{opacity:0; transform: translateX(-8px);} 100%{opacity:1; transform: translateX(0);} }
+
+  /* ---------- Side panel ---------- */
+  .side-panel {
+    flex: 1;
+    display: flex; flex-direction: column; gap: 14px;
+    min-width: 230px;
+  }
+  .panel-box {
+    background: var(--panel-bg);
+    border: 1px solid var(--border-glow);
+    border-radius: 14px;
+    padding: 14px 16px;
+  }
+  .panel-box h3 {
+    font-size: 12px; letter-spacing: 1.5px; color: var(--pink);
+    margin-bottom: 8px;
+  }
+  .important-list { list-style: none; font-size: 13px; color: var(--muted); }
+  .important-list li {
+    padding: 6px 0; border-bottom: 1px dashed rgba(79,216,255,0.15);
+    color: var(--text);
+  }
+  .important-list li.empty { color: var(--muted); font-style: italic; }
+
+  .controls {
+    display: flex; gap: 10px; flex-wrap: wrap;
+  }
+  .ctrl-btn {
+    flex: 1;
+    background: var(--panel-bg);
+    border: 1px solid var(--border-glow);
+    color: var(--cyan);
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 12px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  .ctrl-btn:hover { background: rgba(79,216,255,0.15); }
+  .ctrl-btn.active { background: var(--green); color: #000; border-color: var(--green); }
+
+  .mic-indicator {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11px; color: var(--muted);
+  }
+  .mic-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--muted);
+  }
+  .mic-dot.listening { background: var(--green); box-shadow: 0 0 10px var(--green); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:0.4;} 50%{opacity:1;} }
+
+  .caption {
+    font-size: 12px; color: var(--muted); text-align: center; margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="top-bar">
+    <h2>ZOYA STUDY MODE</h2>
+    <div class="status-pill" id="statusPill">READY</div>
+  </div>
+
+  <div class="main-area">
+    <div class="whiteboard-container" id="whiteboard">
+      <div class="whiteboard-text" id="whiteboardText"></div>
+    </div>
+
+    <div class="side-panel">
+      <div class="panel-box">
+        <h3>IMPORTANT FOR EXAM</h3>
+        <ul class="important-list" id="importantList">
+          <li class="empty">Jab bhi important point aayega, yahan dikhega...</li>
+        </ul>
+      </div>
+
+      <div class="panel-box">
+        <h3>VOICE CONTROL</h3>
+        <div class="mic-indicator">
+          <div class="mic-dot" id="micDot"></div>
+          <span id="micStatus">Mic ready — "ruk jao" / "start karo" bolo</span>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="ctrl-btn" id="pauseBtn">⏸ RUK JAO</button>
+        <button class="ctrl-btn" id="resumeBtn">▶ START KARO</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="caption" id="captionText">Test content load ho raha hai...</div>
+</div>
+
+<script>
+// =========================================================
+// STUDY MODE ENGINE
+// This version uses local TEST content so the animation can
+// be verified before wiring it to the real Gemini backend.
+// =========================================================
+
+// ---- Test content (will later come from /api/study_content) ----
+const TEST_CONTENT = [
+  { text: "Programming in C ek structured programming language hai, jo Dennis Ritchie ne 1972 mein Bell Labs mein banayi thi.", important: false },
+  { text: "C language procedural hai — iska matlab hai program step-by-step functions ke through chalta hai.", important: false },
+  { text: "IMPORTANT: C ke basic structure mein hamesha ek main() function hona zaroori hai — yahi se program ka execution start hota hai.", important: true },
+  { text: "C mein variables declare karne ke liye data type likhna padta hai, jaise int, float, char, double.", important: false },
+  { text: "IMPORTANT: C ke keywords (jaise int, return, if, while) reserved hote hain — inhe variable name ke roop mein use nahi kar sakte. Ye exam mein bahut baar poocha gaya hai.", important: true },
+  { text: "Har C statement ke end mein semicolon (;) lagana compulsory hai, warna compiler error dega.", important: false }
+];
+
+let currentIndex = 0;
+let isPaused = false;
+let isTyping = false;
+let charTimer = null;
+
+const whiteboardText = document.getElementById('whiteboardText');
+const importantList = document.getElementById('importantList');
+const statusPill = document.getElementById('statusPill');
+const captionText = document.getElementById('captionText');
+const pauseBtn = document.getElementById('pauseBtn');
+const resumeBtn = document.getElementById('resumeBtn');
+const micDot = document.getElementById('micDot');
+const micStatus = document.getElementById('micStatus');
+
+let typedSoFar = "";   // what has already been fully typed in current paragraph
+let charIndex = 0;     // char position within current paragraph being typed
+
+// ---------- Typewriter animation for one paragraph ----------
+function typeParagraph(item, onDone) {
+  isTyping = true;
+
+  const p = document.createElement('div');
+  if (item.important) p.classList.add('important-highlight');
+  whiteboardText.appendChild(p);
+
+  const cursor = document.createElement('span');
+  cursor.className = 'cursor-blink';
+
+  function typeChar() {
+    if (isPaused) {
+      charTimer = setTimeout(typeChar, 200);
+      return;
+    }
+    if (charIndex < item.text.length) {
+      typedSoFar = item.text.slice(0, charIndex + 1);
+      p.textContent = typedSoFar;
+      p.appendChild(cursor);
+      charIndex++;
+      charTimer = setTimeout(typeChar, 28);
+    } else {
+      p.textContent = item.text;
+      typedSoFar = "";
+      charIndex = 0;
+
+      if (item.important) {
+        addImportantPoint(item.text.replace(/^IMPORTANT:\s*/i, ''));
+      }
+
+      onDone();
+    }
+  }
+  typeChar();
+}
+
+function addImportantPoint(text) {
+  const emptyMsg = importantList.querySelector('.empty');
+  if (emptyMsg) emptyMsg.remove();
+  const li = document.createElement('li');
+  li.textContent = "⭐ " + text;
+  importantList.appendChild(li);
+}
+
+// ---------- Run through all paragraphs ----------
+function playFrom(index) {
+  if (index >= TEST_CONTENT.length) {
+    statusPill.textContent = "COMPLETE";
+    captionText.textContent = "Ye unit complete ho gaya.";
+    isTyping = false;
+    return;
+  }
+  currentIndex = index;
+  statusPill.textContent = "EXPLAINING...";
+  captionText.textContent = "Paragraph " + (index + 1) + " / " + TEST_CONTENT.length;
+
+  typeParagraph(TEST_CONTENT[index], () => {
+    if (!isPaused) {
+      setTimeout(() => playFrom(index + 1), 500);
+    }
+  });
+}
+
+// ---------- Pause / Resume ----------
+function pauseStudy() {
+  isPaused = true;
+  statusPill.textContent = "PAUSED";
+  captionText.textContent = "Rok diya gaya — jab chaho, 'start karo' bolo.";
+  pauseBtn.classList.add('active');
+  resumeBtn.classList.remove('active');
+}
+
+function resumeStudy() {
+  if (!isPaused) return;
+  isPaused = false;
+  statusPill.textContent = "EXPLAINING...";
+  captionText.textContent = "Wahin se shuru kar rahe hain...";
+  pauseBtn.classList.remove('active');
+  resumeBtn.classList.add('active');
+
+  // If we were mid-paragraph, the typeChar loop will resume itself
+  // (isPaused flag check inside typeChar). If a paragraph had fully
+  // finished and we stopped before starting the next one, continue:
+  if (!isTyping) {
+    playFrom(currentIndex + 1);
+  }
+}
+
+pauseBtn.addEventListener('click', pauseStudy);
+resumeBtn.addEventListener('click', resumeStudy);
+
+// ---------- Voice control within study mode ----------
+function initStudyVoice() {
+  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    micStatus.textContent = "Voice control is browser mein supported nahi hai.";
+    return;
+  }
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const rec = new SpeechRecognition();
+  rec.continuous = true;
+  rec.interimResults = false;
+  rec.lang = 'hi-IN';
+
+  rec.onresult = (event) => {
+    const last = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
+    console.log("Study mode heard:", last);
+
+    if (last.includes("ruk जाओ") || last.includes("ruk jao") || last.includes("रुक जाओ") || last.includes("रुको") || last.includes("pause")) {
+      pauseStudy();
+    } else if (last.includes("start karo") || last.includes("स्टार्ट करो") || last.includes("शुरू करो") || last.includes("resume")) {
+      resumeStudy();
+    }
+  };
+
+  rec.onerror = () => {
+    setTimeout(() => { try { rec.start(); } catch (e) {} }, 1000);
+  };
+  rec.onend = () => {
+    try { rec.start(); } catch (e) {}
+  };
+
+  try {
+    rec.start();
+    micDot.classList.add('listening');
+  } catch (e) {}
+}
+
+// ---------- Start ----------
+window.addEventListener('load', () => {
+  captionText.textContent = "Test content shuru ho raha hai...";
+  initStudyVoice();
+  setTimeout(() => playFrom(0), 800);
+});
+</script>
+
+</body>
+</html>

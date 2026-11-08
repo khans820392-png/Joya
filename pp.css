@@ -1,0 +1,36 @@
+body{
+    margin: 0;
+    padding: 0;
+}
+
+h1{
+    background-color: yellow;
+    text-align: center;
+}
+
+p{
+    text-align: justify;
+    padding: 10px;
+    display: none;
+}
+
+div.first{
+    background-color: red;
+    padding: 30px;
+}
+
+div.first:hover{
+    background-color: blue;
+}
+
+div.first:hover p{
+    display: block;
+}
+
+div.b{
+    background-color: green;
+}
+
+.b:hover p{
+    display: block;
+}

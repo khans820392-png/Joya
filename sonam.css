@@ -1,0 +1,25 @@
+table{
+	border-collapse:collapse;
+	width:100%;
+	height:60%;
+	text-align:center; 
+	background-color:lightyellow 
+}
+.a{
+	background-color:darkgreen;
+	color:white;
+	font-size:25px; 
+}
+.b{
+	background-color:skyblue;
+	
+	font-size:18px; 
+}
+.c{
+	font-weight:bold;
+}
+.a:hover{background-color:purple;
+	color:white;
+
+
+}

@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>लीड डैशबोर्ड</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--text:#1b1f24;--muted:#667085;--line:#e3e6ea;--accent:#0f766e;--accent-t:#fff;--warn:#b45309;--danger:#b42318;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#111418;--card:#1a1f25;--text:#e8eaed;--muted:#98a2b3;--line:#2c333b;--accent:#2dd4bf;--accent-t:#06201d;--warn:#fbbf24;--danger:#f97066}}
+:root[data-theme="dark"]{--bg:#111418;--card:#1a1f25;--text:#e8eaed;--muted:#98a2b3;--line:#2c333b;--accent:#2dd4bf;--accent-t:#06201d;--warn:#fbbf24;--danger:#f97066}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI","Noto Sans Devanagari",sans-serif;line-height:1.5}
+main{max-width:860px;margin:0 auto;padding:16px}
+h1{font-size:1.4rem;margin:0 0 4px}
+.sub{color:var(--muted);margin:0 0 14px;font-size:.92rem}
+.stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.chip{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:999px;padding:6px 12px;font-size:.88rem;cursor:pointer}
+.chip.on{background:var(--accent);color:var(--accent-t);border-color:var(--accent)}
+.chip b{margin-left:4px}
+input,select,textarea,button{font:inherit;color:var(--text)}
+input,select,textarea{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%}
+textarea{min-height:90px;resize:vertical}
+.btn{background:var(--accent);color:var(--accent-t);border:0;border-radius:8px;padding:8px 14px;cursor:pointer;text-decoration:none;display:inline-block;font-size:.9rem}
+.btn.alt{background:transparent;color:var(--text);border:1px solid var(--line)}
+.btn.del{background:transparent;color:var(--danger);border:1px solid var(--line)}
+details{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px}
+summary{cursor:pointer;font-weight:600}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.grid .full{grid-column:1/-1}
+@media (max-width:560px){.grid{grid-template-columns:1fr}}
+label{font-size:.82rem;color:var(--muted);display:block;margin-bottom:2px}
+.bar{display:flex;gap:8px;margin:12px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+.top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;flex-wrap:wrap}
+.name{font-weight:700;font-size:1.05rem}
+.meta{color:var(--muted);font-size:.88rem}
+.notes{margin:6px 0;font-size:.92rem;white-space:pre-wrap}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.row select,.row input{width:auto}
+.due{color:var(--warn);font-weight:600;font-size:.85rem}
+.empty{text-align:center;color:var(--muted);padding:30px 10px}
+</style>
+</head>
+<body>
+<main>
+<h1>लीड डैशबोर्ड</h1>
+<p class="sub">अपनी सारी लीड एक जगह रखो, स्टेटस बदलो और एक क्लिक में WhatsApp खोलो।</p>
+
+<div class="stats" id="stats"></div>
+
+<details id="addBox">
+<summary>+ नई लीड जोड़ो</summary>
+<div class="grid">
+<div><label>बिजनेस का नाम *</label><input id="f_name"></div>
+<div><label>कैटेगरी (बुटीक, सैलून...)</label><input id="f_cat"></div>
+<div><label>फोन नंबर</label><input id="f_phone" inputmode="tel"></div>
+<div><label>Instagram (@नाम या लिंक)</label><input id="f_ig"></div>
+<div><label>Facebook (नाम या लिंक)</label><input id="f_fb"></div>
+<div><label>फॉलो-अप तारीख</label><input id="f_due" type="date"></div>
+<div class="full"><label>नोट्स</label><textarea id="f_notes"></textarea></div>
+<div class="full"><button class="btn" id="addBtn">लीड सेव करो</button></div>
+</div>
+</details>
+
+<details>
+<summary>WhatsApp पिच मैसेज बदलो</summary>
+<p class="meta">{नाम} और {कैटेगरी} अपने-आप भर जाएंगे।</p>
+<textarea id="pitch"></textarea>
+<div class="row"><button class="btn alt" id="pitchReset">पहले वाला मैसेज वापस लाओ</button></div>
+</details>
+
+<details>
+<summary>बैकअप और रीस्टोर</summary>
+<p class="meta">डेटा इसी ब्राउज़र में सेव रहता है। सुरक्षित रखने के लिए नीचे का टेक्स्ट कॉपी करके कहीं रख लो।</p>
+<textarea id="backup"></textarea>
+<div class="row">
+<button class="btn alt" id="mkBackup">बैकअप टेक्स्ट बनाओ</button>
+<button class="btn alt" id="loadBackup">इस टेक्स्ट से लोड करो</button>
+</div>
+</details>
+
+<div class="bar">
+<input id="q" placeholder="नाम, फोन या कैटेगरी से खोजो">
+</div>
+<div id="list"></div>
+</main>
+
+<script>
+(function(){
+var STATUS=["नई","बात हुई","फॉलो-अप","डील हुई","मना किया"];
+var DEFAULT_PITCH="नमस्ते {नाम} जी, मैंने आपका {कैटेगरी} का काम देखा, बहुत अच्छा लगा। मैं छोटे बिजनेस के लिए सस्ती और सुंदर वेबसाइट बनाता हूं, जिससे ग्राहक सीधे ऑनलाइन पूछताछ और ऑर्डर कर सकें। क्या मैं आपको एक फ्री नमूना दिखा सकता हूं?";
+var leads=read("leads",[]);
+var pitch=read("pitch",DEFAULT_PITCH);
+var filter="सब";
+
+function read(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
+function write(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function $(id){return document.getElementById(id)}
+function today(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function phoneDigits(p){var d=String(p||"").replace(/\D/g,"");if(d.length===10)d="91"+d;else if(d.length===11&&d[0]==="0")d="91"+d.slice(1);return d}
+function social(v,base){v=(v||"").trim();if(!v)return "";if(/^https?:\/\//i.test(v))return v;return base+v.replace(/^@/,"")}
+function waLink(l){var d=phoneDigits(l.phone);if(!d)return "";var t=pitch.split("{नाम}").join(l.name).split("{कैटेगरी}").join(l.cat||"बिजनेस");return "https://wa.me/"+d+"?text="+encodeURIComponent(t)}
+
+function renderStats(){
+var h="";["सब"].concat(STATUS).forEach(function(s){
+var n=s==="सब"?leads.length:leads.filter(function(l){return l.status===s}).length;
+h+='<button class="chip'+(filter===s?' on':'')+'" data-f="'+esc(s)+'">'+esc(s)+'<b>'+n+'</b></button>';
+});
+$("stats").innerHTML=h;
+}
+
+function render(){
+renderStats();
+var q=$("q").value.trim().toLowerCase(),t=today();
+var rows=leads.filter(function(l){
+if(filter!=="सब"&&l.status!==filter)return false;
+if(!q)return true;
+return (l.name+" "+l.phone+" "+l.cat).toLowerCase().indexOf(q)>-1;
+});
+if(!rows.length){$("list").innerHTML='<div class="empty">कोई लीड नहीं मिली। ऊपर से नई लीड जोड़ो।</div>';return}
+$("list").innerHTML=rows.map(function(l){
+var wa=waLink(l),ig=social(l.ig,"https://instagram.com/"),fb=social(l.fb,"https://facebook.com/");
+var due=l.due&&l.status!=="डील हुई"&&l.status!=="मना किया"&&l.due<=t?'<span class="due">फॉलो-अप का समय: '+esc(l.due)+'</span>':'';
+var opts=STATUS.map(function(s){return '<option'+(s===l.status?' selected':'')+'>'+esc(s)+'</option>'}).join("");
+return '<div class="card" data-id="'+l.id+'"><div class="top"><div><div class="name">'+esc(l.name)+'</div><div class="meta">'+esc(l.cat)+(l.phone?' · '+esc(l.phone):'')+'</div></div>'+due+'</div>'
++(l.notes?'<div class="notes">'+esc(l.notes)+'</div>':'')
++'<div class="row">'
++(wa?'<a class="btn" target="_blank" rel="noopener" href="'+esc(wa)+'">WhatsApp</a>':'')
++(l.phone?'<a class="btn alt" href="tel:'+esc(l.phone)+'">फोन</a>':'')
++(ig?'<a class="btn alt" target="_blank" rel="noopener" href="'+esc(ig)+'">Instagram</a>':'')
++(fb?'<a class="btn alt" target="_blank" rel="noopener" href="'+esc(fb)+'">Facebook</a>':'')
++'</div><div class="row"><select data-act="status">'+opts+'</select>'
++'<input type="date" data-act="due" value="'+esc(l.due||"")+'">'
++'<button class="btn del" data-act="del">हटाओ</button></div></div>';
+}).join("");
+}
+
+$("addBtn").onclick=function(){
+var name=$("f_name").value.trim();
+if(!name){$("f_name").focus();return}
+leads.unshift({id:Date.now(),name:name,cat:$("f_cat").value.trim(),phone:$("f_phone").value.trim(),ig:$("f_ig").value.trim(),fb:$("f_fb").value.trim(),due:$("f_due").value,notes:$("f_notes").value.trim(),status:"नई"});
+write("leads",leads);
+["f_name","f_cat","f_phone","f_ig","f_fb","f_due","f_notes"].forEach(function(i){$(i).value=""});
+render();
+};
+
+$("list").addEventListener("change",function(e){
+var card=e.target.closest(".card");if(!card)return;
+var l=leads.filter(function(x){return String(x.id)===card.dataset.id})[0];if(!l)return;
+if(e.target.dataset.act==="status")l.status=e.target.value;
+if(e.target.dataset.act==="due")l.due=e.target.value;
+write("leads",leads);render();
+});
+$("list").addEventListener("click",function(e){
+if(e.target.dataset.act!=="del")return;
+var card=e.target.closest(".card");
+if(!confirm("यह लीड हटानी है?"))return;
+leads=leads.filter(function(x){return String(x.id)!==card.dataset.id});
+write("leads",leads);render();
+});
+$("stats").addEventListener("click",function(e){
+var b=e.target.closest(".chip");if(!b)return;
+filter=b.dataset.f;render();
+});
+$("q").oninput=render;
+
+$("pitch").value=pitch;
+$("pitch").oninput=function(){pitch=this.value;write("pitch",pitch)};
+$("pitchReset").onclick=function(){pitch=DEFAULT_PITCH;$("pitch").value=pitch;write("pitch",pitch)};
+
+$("mkBackup").onclick=function(){$("backup").value=JSON.stringify(leads);$("backup").select()};
+$("loadBackup").onclick=function(){
+try{
+var d=JSON.parse($("backup").value);
+if(!Array.isArray(d))throw 0;
+if(!confirm("मौजूदा लीड की जगह यह बैकअप लोड होगा। ठीक है?"))return;
+leads=d;write("leads",leads);render();
+}catch(e){alert("बैकअप टेक्स्ट सही नहीं है।")}
+};
+
+render();
+})();
+</script>
+</body>
+</html>
